@@ -1,6 +1,6 @@
 {
   "name": "serverless-leo",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Serverless plugin for leo microservices",
   "main": "index.js",
   "directories": {
