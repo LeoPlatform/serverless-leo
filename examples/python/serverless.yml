@@ -1,0 +1,28 @@
+plugins:
+  - serverless-leo
+
+service: hello-serverless-leo-php-world
+
+provider:
+  name: aws
+  runtime: python3.7
+  region: ${opt:region, 'us-east-1'}
+  stage: ${opt:stage, 'dev'}
+  stackName: ${self:provider.stage}-${self:service}
+
+custom:
+  stage: ${self:provider.stage}
+  dev:
+    leoStack: TestBus
+  test:
+    leoStack: TestBus
+
+functions:
+  helloPythonWorld:
+    handler: index.handler
+    memorySize: 128
+    timeout: 10
+    leo:
+      source: test_hello
+
+# AWS has a cron event scheduler for lambda https://serverless.com/framework/docs/providers/aws/events/schedule/

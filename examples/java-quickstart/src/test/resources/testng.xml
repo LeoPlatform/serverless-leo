@@ -1,0 +1,11 @@
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd" >
+<suite name="LeoJavaQuickstart" verbose="10">
+    <test name="All">
+        <packages>
+            <package name=".*"/>
+        </packages>
+        <classes>
+            <class name="com.leo.load.QuickPayloadTest"/>
+        </classes>
+    </test>
+</suite>

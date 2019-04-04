@@ -1,0 +1,42 @@
+plugins:
+  - serverless-webpack
+  - serverless-leo
+
+service: hello-serverless-leo-world
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  region: ${opt:region, 'us-east-1'}
+  stage: ${opt:stage, 'dev'}
+  stackName: ${self:provider.stage}-${self:service}
+
+environment:
+  stage: ${self:provider.stage}
+
+custom:
+  dev:
+    leoStack: TestBus
+  test:
+    leoStack: TestBus
+
+package:
+  # create individual files for lambdas
+  individually: true
+
+functions:
+  helloNodeWorld:
+    handler: src/helloNode.handler
+    memorySize: 128
+    timeout: 10
+    # vpc:
+    #   securityGroupIds:
+		# 			- sg-4a7f2525
+		# 	subnetIds:
+		# 			- subnet-cb1d2bbc
+		# 			- subnet-682be831
+		# 			- subnet-b89f1193
+    leo:
+      source: test_hello
+
+# AWS has a cron event scheduler for lambda https://serverless.com/framework/docs/providers/aws/events/schedule/

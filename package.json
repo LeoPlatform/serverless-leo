@@ -1,0 +1,33 @@
+{
+  "name": "serverless-leo",
+  "version": "1.0.0",
+  "description": "Serverless plugin for leo microservices",
+  "main": "index.js",
+  "directories": {
+    "example": "examples"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LeoPlatform/serverless-leo.git"
+  },
+  "keywords": [
+    "serverless",
+    "plugin",
+    "leo",
+    "leo-sdk",
+    "microservices",
+    "bot"
+  ],
+  "author": "Taylor",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/LeoPlatform/serverless-leo/issues"
+  },
+  "homepage": "https://github.com/LeoPlatform/serverless-leo#readme",
+  "dependencies": {
+    "bluebird": "^3.5.4"
+  }
+}
