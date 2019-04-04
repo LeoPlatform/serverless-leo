@@ -1,0 +1,34 @@
+plugins:
+  - serverless-leo
+
+service: hello-serverless-leo-java-world
+
+provider:
+  name: aws
+  runtime: java8
+  region: ${opt:region, 'us-east-1'}
+  stage: ${opt:stage, 'dev'}
+  stackName: ${self:provider.stage}-${self:service}
+
+environment:
+  stage: ${self:provider.stage}
+
+custom:
+  stage: ${self:provider.stage}
+  dev:
+    leoStack: TestBus
+  test:
+    leoStack: TestBus
+
+package:
+  artifact: build/distributions/java-quickstart-1.0.0.zip
+
+functions:
+  helloJavaWorld:
+    handler: com.leo.load.QuickstartLoader
+    memorySize: 128
+    timeout: 10
+    leo:
+      source: test_hello
+
+# AWS has a cron event scheduler for lambda https://serverless.com/framework/docs/providers/aws/events/schedule/

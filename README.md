@@ -17,6 +17,7 @@ functions:
 ```
 
 ## Examples
+Requires the leo platform (bus) for configuration. https://github.com/LeoPlatform/Leo
 ##### nodejs
 ##### java
 ##### python

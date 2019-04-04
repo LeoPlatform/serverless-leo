@@ -59,3 +59,16 @@ typings/
 
 # next.js build output
 .next
+
+# serverless cloudformation output
+.serverless/
+
+package-lock.json
+
+# java-quickstart gradle build directory
+examples/java-quickstart/.gradle/
+examples/java-quickstart/build/
+
+# not sure about some python files
+examples/python/.idea
+examples/python/venv

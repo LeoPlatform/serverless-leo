@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="30 seconds">
+    <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+        <withJansi>true</withJansi>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>info</level>
+        </filter>
+        <encoder>
+            <charset>UTF-8</charset>
+            <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) %cyan(%logger{36}) - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="async_console" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="console"/>
+        <includeCallerData>false</includeCallerData>
+    </appender>
+
+    <root level="all">
+        <appender-ref ref="async_console"/>
+    </root>
+
+</configuration>

@@ -1,0 +1,53 @@
+apply plugin: 'java'
+
+group = "com.leo"
+version = "1.0.0"
+compileJava {
+    sourceCompatibility = '1.8'
+    targetCompatibility = '1.8'
+    options.encoding = "UTF-8"
+    options.debugOptions.debugLevel = "source,lines,vars"
+}
+
+dependencies {
+    compile(
+            'io.leoplatform:leo-sdk-aws:1.0.1',
+            'org.glassfish:javax.json:1.1.2',
+            'com.fasterxml.jackson.core:jackson-core:2.9.7',
+            'javax.xml.bind:jaxb-api:2.3.0'
+    )
+    testCompile("org.testng:testng:6.14.3")
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'com.leo.load.QuickstartLoader'
+    }
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+}
+
+tasks.withType(Test) {
+    test {
+        useTestNG {
+            useDefaultListeners = true
+            options.suites('src/test/resources/testng.xml')
+        }
+        testLogging {
+            events 'passed', 'skipped', "failed"
+        }
+    }
+}
+
+task buildZip(type: Zip) {
+    from compileJava
+    from processResources
+    into('lib') {
+        from configurations.runtime
+    }
+}
+build.dependsOn buildZip
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
