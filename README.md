@@ -12,9 +12,12 @@ plugins:
 custom:
   stage: ${opt:stage, 'dev'}
   dev:
+    # The name of your leo platform stack
     leoStack: TestBus
   test:
-    leoStack: TestBus
+    # The arn for the LeoInstallFunction lambda in your leo platform stack.
+    # This is an alternative to using the leoStack variable. If the bus and lambda are in different accounts for example.
+    leoRegister: arn:aws:lambda:us-east-1:123456:function:TestBus-LeoInstallFunction-2IMP25UOQ64G
 
 functions:
   helloWorld:

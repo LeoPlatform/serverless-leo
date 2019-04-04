@@ -10,6 +10,6 @@
   "license": "MIT",
   "dependencies": {},
   "devDependencies": {
-    "serverless-leo": "rc"
+    "serverless-leo": "^1.0.2"
   }
 }

@@ -13,7 +13,7 @@
     "leo-sdk": "^2.2.8"
   },
   "devDependencies": {
-    "serverless-leo": "rc",
+    "serverless-leo": "^1.0.2",
     "serverless-webpack": "^5.2.0",
     "webpack": "^4.29.6",
     "webpack-bundle-analyzer": "^3.1.0"
