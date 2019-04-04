@@ -18,6 +18,6 @@ functions:
 
 ## Examples
 Requires the leo platform (bus) for configuration. https://github.com/LeoPlatform/Leo
-##### nodejs
-##### java
-##### python
+##### nodejs - https://github.com/LeoPlatform/serverless-leo/tree/master/examples/nodejs
+##### java - https://github.com/LeoPlatform/serverless-leo/tree/master/examples/java-quickstart
+##### python (incomplete) - https://github.com/LeoPlatform/serverless-leo/tree/master/examples/python
