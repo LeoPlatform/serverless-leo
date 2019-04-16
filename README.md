@@ -16,7 +16,7 @@ custom:
     leoStack: TestBus
   test:
     # The arn for the LeoInstallFunction lambda in your leo platform stack.
-    # This is an alternative to using the leoStack variable. If the bus and lambda are in different accounts for example.
+    # This is an alternative to using the leoStack variable. EG: the bus and lambda are in different accounts.
     leoRegister: arn:aws:lambda:us-east-1:123456:function:TestBus-LeoInstallFunction-2IMP25UOQ64G
 
 functions:
