@@ -30,7 +30,7 @@ functions:
 Use the standard `serverless deploy` cli command to deploy your microservice. Optional -s or -stage parameter (standard serverless).
 
 ## Examples
-Requires the leo platform (bus) for configuration. https://github.com/LeoPlatform/Leo
-##### nodejs - https://github.com/LeoPlatform/serverless-leo/tree/master/examples/nodejs
-##### java - https://github.com/LeoPlatform/serverless-leo/tree/master/examples/java-quickstart
-##### python (incomplete) - https://github.com/LeoPlatform/serverless-leo/tree/master/examples/python
+Requires the leo platform (bus). Step 2 in this guide: https://github.com/LeoPlatform/Leo#install-the-leo-platform-stack
+##### Nodejs - https://github.com/LeoPlatform/serverless-leo/tree/master/examples/nodejs
+##### Java - https://github.com/LeoPlatform/serverless-leo/tree/master/examples/java-quickstart
+##### Python (incomplete) - https://github.com/LeoPlatform/serverless-leo/tree/master/examples/python
