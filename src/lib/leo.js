@@ -22,6 +22,8 @@ module.exports = {
                 }
             }
         }
+        const registrations = []
+        registrations.push(_.cloneDeep(customInstall))
         return BbPromise.each(
             allFunctions,
             functionName => {
@@ -44,11 +46,18 @@ module.exports = {
                         installProperty.settings.source = stream.source
                     }
 
-                    customInstall.Properties[logicalId] = installProperty
+                    let currentRegister = registrations[registrations.length - 1]
+                    if (Object.keys(currentRegister.Properties).length > 100) {
+                        currentRegister = _.cloneDeep(customInstall)
+                        registrations.push(currentRegister)
+                    }
+                    currentRegister.Properties[logicalId] = installProperty
                 }
             }
         ).then(() => {
-            cloudformation.Resources.LeoRegister = customInstall
+            registrations.forEach((leoRegister, index) => {
+                cloudformation.Resources[`LeoRegister-${index}`] = leoRegister
+            })
         });
     }
 };
