@@ -69,6 +69,9 @@ package-lock.json
 examples/java-quickstart/.gradle/
 examples/java-quickstart/build/
 
+# don't check in specific config
+examples/nodejs/leo_config.js
+
 # not sure about some python files
 examples/python/.idea
 examples/python/venv
