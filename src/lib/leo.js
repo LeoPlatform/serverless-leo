@@ -54,7 +54,9 @@ module.exports = {
                     let botId = functionObj.name + botSuffix
                     const installProperty = {
                         type: "cron",
-                        settings: {},
+                        settings: {
+                            botNumber
+                        },
                         lambdaName: {
                             Ref: logicalId
                         },

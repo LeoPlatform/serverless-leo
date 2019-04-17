@@ -37,7 +37,7 @@ functions:
 		# 			- subnet-cb1d2bbc
 		# 			- subnet-682be831
 		# 			- subnet-b89f1193
-    leo:
-      source: test_hello
+    events:
+      - leo: test_hello
 
 # AWS has a cron event scheduler for lambda https://serverless.com/framework/docs/providers/aws/events/schedule/
