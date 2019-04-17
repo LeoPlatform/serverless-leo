@@ -7,7 +7,7 @@
     "example": "examples"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha lib/leo.test.js"
   },
   "repository": {
     "type": "git",
@@ -28,6 +28,12 @@
   },
   "homepage": "https://github.com/LeoPlatform/serverless-leo#readme",
   "dependencies": {
-    "bluebird": "^3.5.4"
+    "bluebird": "^3.5.4",
+    "lodash": "^4.17.11"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "mocha": "^6.1.3",
+    "serverless": "^1.40.0"
   }
 }
