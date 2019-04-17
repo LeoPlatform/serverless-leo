@@ -2,7 +2,10 @@
 Serverless plugin. Deploy your leo bots and microservices using serverless.
 
 ## Install serverless-leo
+```
+npm install serverless -g
 npm install --save-dev serverless-leo
+```
 
 ## Configure serverless.yml
 ```
@@ -49,7 +52,7 @@ hello:
     - leo: helloWorldTestQueue
 ```
 You can specify multiple queues for a single lambda. Each will become a separate bot, visible in the bus ui (Botmon).
-##### Name bots
+#### Name bots
 You can define the queue as an object and give the bot a name. Otherwise the name of the bot will be the name of the lambda plus the queue.
 ```
 hello:
