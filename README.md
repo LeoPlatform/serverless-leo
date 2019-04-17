@@ -16,7 +16,7 @@ custom:
     leoStack: TestBus
   test:
     # The arn for the LeoInstallFunction lambda in your leo platform stack.
-    # This is an alternative to using the leoStack variable. If the bus and lambda are in different accounts for example.
+    # This is an alternative to using the leoStack variable. EG: the bus and lambda are in different accounts.
     leoRegister: arn:aws:lambda:us-east-1:123456:function:TestBus-LeoInstallFunction-2IMP25UOQ64G
 
 functions:
@@ -30,7 +30,7 @@ functions:
 Use the standard `serverless deploy` cli command to deploy your microservice. Optional -s or -stage parameter (standard serverless).
 
 ## Examples
-Requires the leo platform (bus) for configuration. https://github.com/LeoPlatform/Leo
-##### nodejs - https://github.com/LeoPlatform/serverless-leo/tree/master/examples/nodejs
-##### java - https://github.com/LeoPlatform/serverless-leo/tree/master/examples/java-quickstart
-##### python (incomplete) - https://github.com/LeoPlatform/serverless-leo/tree/master/examples/python
+Requires the leo platform (bus). Step 2 in this guide: https://github.com/LeoPlatform/Leo#install-the-leo-platform-stack
+##### Nodejs - https://github.com/LeoPlatform/serverless-leo/tree/master/examples/nodejs
+##### Java - https://github.com/LeoPlatform/serverless-leo/tree/master/examples/java-quickstart
+##### Python (incomplete) - https://github.com/LeoPlatform/serverless-leo/tree/master/examples/python
