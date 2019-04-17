@@ -22,6 +22,7 @@ class AwsCompileLeo {
                 this.validated = this.validate();
 
                 if (this.validated.streams.length === 0) {
+                    console.log('Warning: serverless-leo plugin is included but not being used.')
                     return BbPromise.resolve();
                 }
 
