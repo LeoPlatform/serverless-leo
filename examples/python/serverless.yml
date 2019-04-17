@@ -22,7 +22,7 @@ functions:
     handler: index.handler
     memorySize: 128
     timeout: 10
-    leo:
-      source: test_hello
+    events:
+      - leo: test_hello
 
 # AWS has a cron event scheduler for lambda https://serverless.com/framework/docs/providers/aws/events/schedule/
