@@ -14,13 +14,7 @@ plugins:
 
 custom:
   stage: ${opt:stage, 'dev'}
-  dev:
-    # The name of your leo bus stack
-    leoStack: TestBus
-  test:
-    # The arn for the LeoInstallFunction lambda in your leo platform stack.
-    # This is an alternative to using the leoStack variable. EG: the bus and lambda are in different accounts.
-    leoRegister: arn:aws:lambda:us-east-1:123456:function:TestBus-LeoInstallFunction-2IMP25UOQ64G
+  leoStack: TestBus
 
 functions:
   hello:
@@ -81,3 +75,17 @@ world:
   botCount: 4
 ```
 This allows you to partition the queue, or change the configuration of the bot based on the value of the variable at run time.
+
+### LeoRegister configuration
+You can configure the plugin to use different stacks for different stages.
+```
+custom:
+  stage: ${opt:stage, 'dev'}
+  dev:
+    leoStack: TestBus
+  test:
+    # The arn for the LeoInstallFunction lambda in your leo platform stack.
+    # This is an alternative to using the leoStack variable. EG: the bus and lambda are in different accounts.
+    leoRegister: arn:aws:lambda:us-east-1:123456:function:TestBus-LeoInstallFunction-2IMP25UOQ64G
+```
+In this example leoStack would be used when deployed using --stage dev. leoRegister would be used when using --stage test
