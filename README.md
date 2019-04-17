@@ -15,7 +15,7 @@ plugins:
 custom:
   stage: ${opt:stage, 'dev'}
   dev:
-    # The name of your leo platform stack
+    # The name of your leo bus stack
     leoStack: TestBus
   test:
     # The arn for the LeoInstallFunction lambda in your leo platform stack.
