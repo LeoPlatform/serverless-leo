@@ -15,7 +15,6 @@ environment:
   stage: ${self:provider.stage}
 
 custom:
-  stage: ${self:provider.stage}
   dev:
     leoStack: TestBus
   test:

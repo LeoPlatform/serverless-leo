@@ -1,0 +1,20 @@
+NAME_TOKEN:
+  handler: bots/NAME_TOKEN/index.handler
+  # description: What does this bot do?
+  # leoCron: 0 0 6 * * * 
+  # events:
+  #   - leo: queue-to-trigger-bot
+  # leo:
+  #   uiCodeOverride: true
+  memorySize: 256
+  timeout: 300
+  # role: ApiRole
+  # environment:
+  #   destination: queue-destination 
+  # vpc:
+  #   securityGroupIds: 
+  #     - Fn::FindInMap: [ VpcMap, Ref: ClientDwEnvironment, securityGroups ]
+  #   subnetIds:
+  #     - Fn::ImportValue: !Sub "${StackWithOutputs}-LambdaSubnetA"
+  #     - Fn::ImportValue: !Sub "${StackWithOutputs}-LambdaSubnetB"
+  #     - Fn::ImportValue: !Sub "${StackWithOutputs}-LambdaSubnetC"
