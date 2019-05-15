@@ -13,7 +13,7 @@ NAME_TOKEN:
   #   destination: queue-destination 
   # vpc:
   #   securityGroupIds: 
-  #     - Fn::FindInMap: [ VpcMap, Ref: ClientDwEnvironment, securityGroups ]
+  #     - Fn::FindInMap: [ VpcMap, Ref: MapKey, securityGroups ]
   #   subnetIds:
   #     - Fn::ImportValue: !Sub "${StackWithOutputs}-LambdaSubnetA"
   #     - Fn::ImportValue: !Sub "${StackWithOutputs}-LambdaSubnetB"

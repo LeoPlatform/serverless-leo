@@ -56,7 +56,6 @@ const folderResourceReducer = (findResourceInDirectoryInfos) => {
   return (resource, folder) => {
     const dirInfos = utils.getDirInfo(folder)
     const folderResource = findResourceInDirectoryInfos(dirInfos)
-    // TODO: check for duplicate keys and WARN
     return merge(resource, folderResource)
   }
 }

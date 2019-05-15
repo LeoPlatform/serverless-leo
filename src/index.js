@@ -48,7 +48,7 @@ class AwsCompileLeo {
 
     this.hooks = {
       'create:bot:copy-template': () => {
-        this.serverless.pluginManager.cliOptions['template-url'] = 'https://github.com/LeoPlatform/serverless-leo/tree/create-templates/templates/bot'
+        this.serverless.pluginManager.cliOptions['template-url'] = 'https://github.com/LeoPlatform/serverless-leo/tree/master/templates/bot'
         const { name } = this.serverless.pluginManager.cliOptions
         this.serverless.pluginManager.cliOptions['path'] = `bots${path.sep}${name}`
         return this.serverless.pluginManager.run(['create'])

@@ -17,7 +17,7 @@ npm install serverless -g
 
 ## Create a new NodeJS Leo Microservice and Bot
 ```
-serverless create --template-url https://github.com/LeoPlatform/serverless-leo/tree/create-templates/templates/microservice -p my-microservice
+serverless create --template-url https://github.com/LeoPlatform/serverless-leo/tree/master/templates/microservice -p my-microservice
 cd my-microservice
 npm install
 serverless create bot --name my-bot-name
