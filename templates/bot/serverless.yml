@@ -7,6 +7,7 @@ NAME_TOKEN:
   # leo:
   #   uiCodeOverride: true
   memorySize: 256
+  runtime: nodejs10.x
   timeout: 300
   # role: ApiRole
   # environment:
