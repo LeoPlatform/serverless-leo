@@ -36,10 +36,30 @@ describe('compileLeo', () => {
     await sls.compileLeo()
     expect(sls.serverless.service.provider.compiledCloudFormationTemplate.Resources).to.have.property('LeoRegister0')
   })
+  it('adds LeoRegister to cloudformation if there is register is set to true', async () => {
+    const sls = testServerless()
+    const lambda = cloneDeep(helloNodeWorldLambda)
+    lambda.events = [
+		{
+			leo: {
+				register: true
+			}
+		}
+	]
+    sls.serverless.service.functions.helloNodeWorld = lambda
+    await sls.compileLeo()
+    expect(sls.serverless.service.provider.compiledCloudFormationTemplate.Resources).to.have.property('LeoRegister0')
+  })
   it('adds LeoRegister to cloudformation if there is a leoCron specified', async () => {
     const sls = testServerless()
     const lambda = cloneDeep(helloNodeWorldLambda)
-    lambda.leoCron = '* * * * * *'
+    lambda.events = [
+		{
+			leo: {
+				cron: '* * * * * *'
+			}
+		}
+	]
     sls.serverless.service.functions.helloNodeWorld = lambda
     await sls.compileLeo()
     expect(sls.serverless.service.provider.compiledCloudFormationTemplate.Resources).to.have.property('LeoRegister0')
@@ -48,13 +68,16 @@ describe('compileLeo', () => {
     const sls = testServerless()
     const lambda = cloneDeep(helloNodeWorldLambda)
     lambda.events = [
-      {
-        'leo': 'test_hello'
-      }
+      	{
+			'leo': {
+				botCount: 5,
+				name: 'test_hello',
+				queue: 'something'
+			}
+		}
     ]
-    lambda.botCount = 5
     sls.serverless.service.functions.helloNodeWorld = lambda
-    await sls.compileLeo()
+	await sls.compileLeo()
     expect(Object.keys(sls.serverless.service.provider.compiledCloudFormationTemplate.Resources['LeoRegister0'].Properties).length).to.equal(6)
   })
   it('adds 2 bots to leoRegister with 2 source queues', async () => {
@@ -76,14 +99,19 @@ describe('compileLeo', () => {
     const sls = testServerless()
     const lambda = cloneDeep(helloNodeWorldLambda)
     lambda.events = [
-      {
-        'leo': 'test_hello'
-      },
-      {
-        'leo': 'test_hello2'
-      }
+		{
+			'leo': {
+				queue: 'test_hello',
+				botCount: 5
+			}
+		},
+		{
+			'leo': {
+				queue: 'test_hello2',
+				botCount: 5
+			}
+		}
     ]
-    lambda.botCount = 5
     sls.serverless.service.functions.helloNodeWorld = lambda
     await sls.compileLeo()
     expect(Object.keys(sls.serverless.service.provider.compiledCloudFormationTemplate.Resources['LeoRegister0'].Properties).length).to.equal(11)
@@ -92,14 +120,19 @@ describe('compileLeo', () => {
     const sls = testServerless()
     const lambda = cloneDeep(helloNodeWorldLambda)
     lambda.events = [
-      {
-        'leo': 'test_hello'
-      },
-      {
-        'leo': 'test_hello2'
-      }
+		{
+			'leo': {
+				queue: 'test_hello',
+				botCount: 2
+			}
+		},
+		{
+			'leo': {
+				queue: 'test_hello2',
+				botCount: 2
+			}
+		}
     ]
-    lambda.botCount = 2
     sls.serverless.service.functions.helloNodeWorld = lambda
     await sls.compileLeo()
     expect(sls.serverless.service.provider.compiledCloudFormationTemplate.Resources['LeoRegister0']
