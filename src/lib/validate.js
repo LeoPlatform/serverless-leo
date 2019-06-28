@@ -23,8 +23,8 @@ module.exports = {
       if (functionObject.events) {
         forEach(functionObject.events, (functionEvent, functionName) => {
           if (typeof functionEvent.leo === 'object') {
-            if (!functionEvent.leo.queue) {
-              errors.push(new Error('Error in serverless.yml ' + functionName + ' : Queue is required when specifying the leo event as an object.'))
+            if (!functionEvent.leo.queue && !functionEvent.leo.cron && !functionEvent.leo.register) {
+              errors.push(new Error('Error in serverless.yml ' + functionName + ' : Leo event requires queue, cron, or register.'))
               return false
             }
             streams.push(functionEvent.leo)
