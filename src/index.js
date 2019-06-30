@@ -7,6 +7,7 @@ const path = require('path')
 const validate = require('./lib/validate')
 const compileLeo = require('./lib/leo')
 const utils = require('./lib/utils')
+const leoTools = require('./tools')
 
 // TODO: sls create - Place tempates in memorable cdn location like https://dsco.io/aws-nodejs-leo-microservice
 // TODO: sls create bot - Place all templates in memorable cdn location, and publish them, but also create the schortcuts like `sls create bot --name my-bot-name`
@@ -21,6 +22,25 @@ class AwsCompileLeo {
     this.options = options
     this.provider = this.serverless.getProvider('aws')
     this.commands = {
+      leo: {
+        commands: {
+          'list-bots': {
+            usage: 'List the bots from your leo bus',
+            lifecycleEvents: [
+              'get-bots'
+            ],
+            // TODO: pagination options like AWS
+            // options: {
+            //   'starting-token': {
+            //     usage: 'Used for pagination. Token where you left off (NextToken)'
+            //   },
+            //   'max-items': {
+            //     usage: 'Total number of items to return'
+            //   }
+            // }
+          }
+        }
+      },
       create: {
         commands: {
           bot: {
@@ -47,6 +67,10 @@ class AwsCompileLeo {
     )
 
     this.hooks = {
+      'leo:list-bots:get-bots': async () => {
+        const bots = await leoTools.getBotsContaining()
+        console.log(bots);
+      },
       'create:bot:copy-template': () => {
         this.serverless.pluginManager.cliOptions['template-url'] = 'https://github.com/LeoPlatform/serverless-leo/tree/master/templates/bot'
         const { name } = this.serverless.pluginManager.cliOptions

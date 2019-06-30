@@ -6,7 +6,7 @@ const AWS = require('aws-sdk')
 // SET GLOBAL CONFIG
 AWS.config.dynamodb = { endpoint: 'http://localhost:8000' }
 
-const leoTools = require('../leo-tools')
+const leoTools = require('../')
 const { assert, expect } = require('chai')
 const setupDynamoDBLocal = require('./setup-dynamo-db-local')
 
