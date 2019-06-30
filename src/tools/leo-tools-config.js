@@ -1,6 +1,4 @@
 
-require('./env-check')
-
 module.exports = {
 	// dev
 	/*
