@@ -129,6 +129,14 @@ In this example leoStack would be used when deployed using --stage dev. leoRegis
 ## Tools
 Here are some tools to see what is happening in your bus
 
+```
+provider:
+  name: aws
+  runtime: nodejs10.x
+  leo:
+    stack: dev-bus
+```
+
 ### List Bots
 `serverless leo list bots`
 
