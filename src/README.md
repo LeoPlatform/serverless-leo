@@ -125,3 +125,7 @@ custom:
     leoRegister: arn:aws:lambda:us-east-1:123456:function:TestBus-LeoInstallFunction-2IMP25UOQ64G
 ```
 In this example leoStack would be used when deployed using --stage dev. leoRegister would be used when using --stage test
+
+## Development
+
+If you are going to develop for serverless-leo, some of the unit test rely on dynamodb-local with requires you have Java installed.

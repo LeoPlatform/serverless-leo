@@ -7,7 +7,8 @@
     "example": "examples"
   },
   "scripts": {
-    "test": "mocha 'test/**/*.test.js'"
+    "test": "mocha 'test/**/*.test.js'",
+    "test:local": "AWS_REGION=us-west-2 mocha tools/test/**/*.test.js"
   },
   "repository": {
     "type": "git",
@@ -28,14 +29,17 @@
   },
   "homepage": "https://github.com/LeoPlatform/serverless-leo#readme",
   "dependencies": {
+    "aws-sdk": "^2.485.0",
     "bluebird": "^3.5.4",
     "find-up": "^3.0.0",
     "ignore": "^5.1.1",
     "lodash": "^4.17.11",
-    "parse-gitignore": "^1.0.1"
+    "parse-gitignore": "^1.0.1",
+    "zlib": "^1.0.5"
   },
   "devDependencies": {
     "chai": "^4.2.0",
+    "dynamodb-local": "0.0.29",
     "eslint": "^5.16.0",
     "eslint-config-standard": "^12.0.0",
     "eslint-plugin-import": "^2.17.2",
