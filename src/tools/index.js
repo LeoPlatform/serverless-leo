@@ -19,25 +19,30 @@ const setBotCheckpoint = require('./set-bot-checkpoint')
 const setCronTime = require('./set-cron-time')
 const getEntitiesForQueue = require('./get-entities-for-queue')
 
-module.exports = {
-	getBot,
-	getSetting,
-	findVariationBaseNames,
-	getVariations,
-	updateBotTemplateName,
-	addLambdaTemplate,
-	forceRunBot,
-	getBotsContaining,
-	getRoqueBots,
-	removeTrigger,
-	removeCheckpoints,
-	archiveBot,
-	pauseBot,
-	purgeInstanceLogs,
-	getStatsForBot,
-	removeStatsForBot,
-	getEventsForQueue,
-	setBotCheckpoint,
-	setCronTime,
-	getEntitiesForQueue
+function Tools (toolsConfig) {
+  this.config = toolsConfig
+  Object.assign(this, {
+    getBot,
+    getSetting,
+    findVariationBaseNames,
+    getVariations,
+    updateBotTemplateName,
+    addLambdaTemplate,
+    forceRunBot,
+    getBotsContaining,
+    getRoqueBots,
+    removeTrigger,
+    removeCheckpoints,
+    archiveBot,
+    pauseBot,
+    purgeInstanceLogs,
+    getStatsForBot,
+    removeStatsForBot,
+    getEventsForQueue,
+    setBotCheckpoint,
+    setCronTime,
+    getEntitiesForQueue
+  })
 }
+
+module.exports = Tools

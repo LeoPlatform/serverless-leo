@@ -1,4 +1,4 @@
-// const config = require('./leo-tools-config')
+// 
 // const AWS = require('aws-sdk')
 // var dynamodb = new AWS.DynamoDB()
 
