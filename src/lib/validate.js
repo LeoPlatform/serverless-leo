@@ -21,17 +21,17 @@ module.exports = {
 
     forEach(this.serverless.service.functions, functionObject => {
       if (functionObject.events) {
-        forEach(functionObject.events, (functionEvent, functionName) => {
+        forEach(functionObject.events, (functionEvent) => {
           if (typeof functionEvent.leo === 'object') {
-            if (!functionEvent.leo.queue) {
-              errors.push(new Error('Error in serverless.yml ' + functionName + ' : Queue is required when specifying the leo event as an object.'))
+            if (!functionEvent.leo.queue && !functionEvent.leo.cron && !functionEvent.leo.register) {
+              errors.push(new Error('Error in serverless.yml ' + (functionEvent.leo.name || functionObject.name) + ' : Leo event requires queue, cron, or register.'))
               return false
             }
             streams.push(functionEvent.leo)
           } else if (typeof functionEvent.leo === 'string') {
             streams.push(functionEvent.leo)
           } else {
-            errors.push(new Error('Error in serverless.yml ' + functionName + ' : Leo events should be specified as a string, or as an object.'))
+            errors.push(new Error('Error in serverless.yml ' + (functionEvent.leo.name || functionObject.name) + ' : Leo events should be specified as a string, or as an object.'))
             return false
           }
         })
