@@ -62,7 +62,7 @@ class AwsCompileLeo {
       'after:package:compileFunctions': () => {
         this.validated = this.validate()
         if (this.validated.errors.length > 0) {
-          return Promise.reject(this.validated.errors)
+          return Promise.reject(this.validated.errors.join('\n'))
         }
 
         if (this.validated.streams.length === 0) {
