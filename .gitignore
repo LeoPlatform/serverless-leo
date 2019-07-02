@@ -75,3 +75,6 @@ examples/nodejs/leo_config.js
 # not sure about some python files
 examples/python/.idea
 examples/python/venv
+
+# More
+.vscode
