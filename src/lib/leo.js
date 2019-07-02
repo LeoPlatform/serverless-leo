@@ -58,7 +58,7 @@ module.exports = {
             const botNumbers = times((config && config.botCount) || 1, Number)
             botNumbers.forEach(botNumber => {
               const botSuffix = botNumber > 0 ? '_' + botNumber : ''
-              let botId = `${stage}-${this.serverless.service.service}-${ymlFunctionName}${botSuffix}`
+              let botId = `${this.serverless.service.service}-${stage}-${ymlFunctionName}${botSuffix}`
               const installProperty = {
                 id: botId,
                 type: 'cron',
@@ -73,14 +73,14 @@ module.exports = {
                 installProperty.time = config.cron
               }
               if (sourceQueue) {
-                botId = `${stage}-${this.serverless.service.service}-${ymlFunctionName}_${sourceQueue}${botSuffix}`
+                botId = `${this.serverless.service.service}-${stage}-${ymlFunctionName}_${sourceQueue}${botSuffix}`
                 installProperty.id = botId
                 installProperty.settings.source = sourceQueue
               }
               if (config && config.name) {
                 installProperty.name = config.name + botSuffix
               } else {
-                installProperty.name = functionObj.botName ? functionObj.botName + botSuffix : botId.replace(`${stage}-${this.serverless.service.service}-`, '')
+                installProperty.name = functionObj.botName ? functionObj.botName + botSuffix : botId.replace(`${this.serverless.service.service}-${stage}-`, '')
               }
               if (config && config.codeOverrides) {
                 installProperty.settings.codeOverrides = config.codeOverrides
