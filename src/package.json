@@ -29,13 +29,15 @@
   },
   "homepage": "https://github.com/LeoPlatform/serverless-leo#readme",
   "dependencies": {
-    "aws-sdk": "^2.485.0",
     "bluebird": "^3.5.4",
     "find-up": "^3.0.0",
     "ignore": "^5.1.1",
     "lodash": "^4.17.11",
     "parse-gitignore": "^1.0.1",
     "zlib": "^1.0.5"
+  },
+  "peerDependencies": {
+    "aws-sdk": "2.x"
   },
   "devDependencies": {
     "chai": "^4.2.0",
