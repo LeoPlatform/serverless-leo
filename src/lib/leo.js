@@ -70,7 +70,7 @@ module.exports = {
                 }
               }
               if (config && config.cron) {
-                installProperty.time = config.cron
+                installProperty.settings.time = config.cron
               }
               if (sourceQueue) {
                 botId = `${this.serverless.service.service}-${stage}-${ymlFunctionName}_${sourceQueue}${botSuffix}`
