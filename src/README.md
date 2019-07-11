@@ -15,6 +15,14 @@ If you don't have serverless framework globally installed
 npm install serverless -g
 ```
 
+## To convert an existing Leo Microservice
+```
+serverless create --template-url https://github.com/LeoPlatform/serverless-leo/tree/master/templates/microservice -p my-microservice
+cd my-microservice
+npm install
+serverless create bot --name my-bot-name
+```
+
 ## Create a new NodeJS Leo Microservice and Bot
 ```
 serverless create --template-url https://github.com/LeoPlatform/serverless-leo/tree/master/templates/microservice -p my-microservice
