@@ -73,7 +73,7 @@ module.exports = {
                 installProperty.settings.time = config.cron
               }
               if (sourceQueue) {
-                botId = `${this.serverless.service.service}-${stage}-${sourceQueue}-to-${ymlFunctionName}${botSuffix}`
+                botId = `${this.serverless.service.service}-${stage}-${sourceQueue}-${ymlFunctionName}${botSuffix}`
                 installProperty.id = botId
                 installProperty.settings.source = sourceQueue
               }
