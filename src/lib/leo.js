@@ -54,11 +54,12 @@ module.exports = {
         if (leoEvents.length > 0) {
           leoEvents.forEach(leoEvent => {
             const config = leoEvent.leo instanceof Object ? leoEvent.leo : false
+            const prefix = config && config.prefix ? `${config.prefix}-` : ''
             const sourceQueue = config ? config.queue : leoEvent.leo
             const botNumbers = times((config && config.botCount) || 1, Number)
             botNumbers.forEach(botNumber => {
               const botSuffix = botNumber > 0 ? '-' + botNumber : ''
-              let botId = `${this.serverless.service.service}-${stage}-${ymlFunctionName}${botSuffix}`
+              let botId = `${this.serverless.service.service}-${stage}-${prefix}${ymlFunctionName}${botSuffix}`
               const installProperty = {
                 id: botId,
                 type: 'cron',
@@ -70,10 +71,10 @@ module.exports = {
                 }
               }
               if (config && config.cron) {
-                installProperty.settings.time = config.cron
+                installProperty.time = config.cron
               }
               if (sourceQueue) {
-                botId = `${this.serverless.service.service}-${stage}-${sourceQueue}-${ymlFunctionName}${botSuffix}`
+                botId = `${this.serverless.service.service}-${stage}-${prefix}${sourceQueue}-${ymlFunctionName}${botSuffix}`
                 installProperty.id = botId
                 installProperty.settings.source = sourceQueue
               }
