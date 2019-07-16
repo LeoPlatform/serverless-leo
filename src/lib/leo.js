@@ -64,7 +64,8 @@ module.exports = {
                 id: botId,
                 type: 'cron',
                 settings: {
-                  botNumber
+                  botNumber,
+                  prefix
                 },
                 lambdaName: {
                   Ref: logicalId
