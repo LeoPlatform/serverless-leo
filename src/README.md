@@ -45,8 +45,8 @@ functions:
   world:
     handler: index.handler
     events:
-		- leo
-			cron: 0 0 1 * * *  # Trigger Lambda from a Leo Cron (down to minute)
+		  - leo
+			    cron: 0 0 1 * * *  # Trigger Lambda from a Leo Cron (down to minute)
 ```
 
 ## Deploy your microservice
@@ -87,7 +87,7 @@ world:
   handler: index.handler
   events:
   	- leo:
-		cron: 0 0 1 * * * 
+		  cron: 0 0 1 * * * 
 ```
 The bot will be named the same as the lambda.
 
@@ -98,7 +98,7 @@ world:
   handler: index.handler
   events:
 	- leo:
-		queue: helloWorldTestQueue
+		  queue: helloWorldTestQueue
   		botCount: 4
 ```
 This allows you to partition the queue, or change the configuration of the bot based on the value of the variable at run time.
@@ -110,7 +110,7 @@ world:
   handler: index.handler
   events:
 	- leo:
-  		register: true
+      register: true
 ```
 
 ### LeoRegister configuration

@@ -27,6 +27,9 @@ module.exports = {
               errors.push(new Error('Error in serverless.yml ' + (functionEvent.leo.name || functionObject.name) + ' : Leo event requires queue, cron, or register.'))
               return false
             }
+            if (functionEvent.leo.queue && functionEvent.leo.cron) {
+              errors.push(new Error('Error in serverless.yml ' + (functionEvent.leo.name || functionObject.name) + ' : Leo event cannot have both queue and cron triggers.'))
+            }
             streams.push(functionEvent.leo)
           } else if (typeof functionEvent.leo === 'string') {
             streams.push(functionEvent.leo)
