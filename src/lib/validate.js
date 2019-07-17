@@ -33,7 +33,7 @@ module.exports = {
             streams.push(functionEvent.leo)
           } else if (typeof functionEvent.leo === 'string') {
             streams.push(functionEvent.leo)
-          } else {
+          } else if (functionEvent.leo) {
             errors.push(new Error('Error in serverless.yml ' + (functionEvent.leo.name || functionObject.name) + ' : Leo events should be specified as a string, or as an object.'))
             return false
           }
