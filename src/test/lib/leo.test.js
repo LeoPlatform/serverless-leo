@@ -144,20 +144,6 @@ describe('compileLeo', () => {
     expect(sls.serverless.service.provider.compiledCloudFormationTemplate.Resources['LeoRegister0']
       .Properties['hello-serverless-leo-world-dev-test_hello2-helloNodeWorld-1'].name).to.equal('test_hello2-helloNodeWorld-1')
   })
-  it('names the bot according to the config', async () => {
-    const sls = testServerless()
-    const lambda = cloneDeep(helloNodeWorldLambda)
-    lambda.events = [
-      {
-        'leo': 'test_hello'
-      }
-    ]
-    lambda.botName = 'bot1'
-    sls.serverless.service.functions.helloNodeWorld = lambda
-    await sls.compileLeo()
-    expect(sls.serverless.service.provider.compiledCloudFormationTemplate.Resources['LeoRegister0']
-      .Properties['hello-serverless-leo-world-dev-test_hello-helloNodeWorld'].name).to.equal('bot1')
-  })
   it('names the bot according to the config in events', async () => {
     const sls = testServerless()
     const lambda = cloneDeep(helloNodeWorldLambda)
@@ -172,7 +158,7 @@ describe('compileLeo', () => {
     sls.serverless.service.functions.helloNodeWorld = lambda
     await sls.compileLeo()
     expect(sls.serverless.service.provider.compiledCloudFormationTemplate.Resources['LeoRegister0']
-      .Properties['hello-serverless-leo-world-dev-test_hello-helloNodeWorld'].name).to.equal('bot2')
+      .Properties['hello-serverless-leo-world-dev-helloNodeWorld'].name).to.equal('bot2')
   })
   it('names the bot using the prefix in config in events', async () => {
     const sls = testServerless()

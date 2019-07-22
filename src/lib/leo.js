@@ -60,8 +60,18 @@ module.exports = {
             const sourceQueue = config ? config.queue : leoEvent.leo
             const botNumbers = times((config && config.botCount) || 1, Number)
             botNumbers.forEach(botNumber => {
+              let botId
               let botSuffix = botNumber > 0 ? '-' + botNumber : ''
-              let botId = `${this.serverless.service.service}-${stage}-${botPrefix}${ymlFunctionName}${botSuffix}`
+              // If there is no botPrefix, no source queue and multiple bots: add the eventIndex to the botSuffix (botId ultimately)
+              if (!botPrefix && !sourceQueue && leoEvents.length > 1) {
+                botSuffix = `-${eventIndex}${botSuffix}`
+              }
+              // Only add the queue to the bot name if there are multiple events
+              if (sourceQueue && leoEvents.length > 1) {
+                botId = `${this.serverless.service.service}-${stage}-${botPrefix}${sourceQueue}-${ymlFunctionName}${botSuffix}`
+              } else {
+                botId = `${this.serverless.service.service}-${stage}-${botPrefix}${ymlFunctionName}${botSuffix}`
+              }
               const installProperty = {
                 type: 'cron',
                 settings: {
@@ -72,23 +82,17 @@ module.exports = {
                   Ref: logicalId
                 }
               }
-              if (config && config.cron) {
-                installProperty.time = config.cron
-              }
-              // If there is no source queue, no botPrefix, and there are multiple bots: add the eventIndex to the bot Id
-              if (!sourceQueue && !botPrefix && leoEvents.length > 1) {
-                botSuffix = `-${eventIndex}${botSuffix}`
-                botId = `${this.serverless.service.service}-${stage}-${botPrefix}${ymlFunctionName}${botSuffix}`
-              }
               if (sourceQueue) {
-                botId = `${this.serverless.service.service}-${stage}-${botPrefix}${sourceQueue}-${ymlFunctionName}${botSuffix}`
                 installProperty.settings.source = sourceQueue
                 installProperty.settings.queue = sourceQueue
               }
+              if (config && config.cron) {
+                installProperty.time = config.cron
+              }
               if (config && config.name) {
-                installProperty.name = config.name + botSuffix
+                installProperty.name = config.name
               } else {
-                installProperty.name = functionObj.botName ? `${functionObj.botName}${botSuffix}` : botId.replace(`${this.serverless.service.service}-${stage}-`, '')
+                installProperty.name = botId.replace(`${this.serverless.service.service}-${stage}-`, '')
               }
               if (config && config.codeOverrides) {
                 installProperty.settings.codeOverrides = config.codeOverrides
