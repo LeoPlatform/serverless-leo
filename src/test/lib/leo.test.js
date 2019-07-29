@@ -173,16 +173,16 @@ describe('compileLeo', () => {
       {
         'leo': {
           'cron': '* * * * * *',
-          'prefix': 'prename'
+          'prefix': 'prename2'
         }
       }
     ]
     sls.serverless.service.functions.helloNodeWorld = lambda
     await sls.compileLeo()
     expect(sls.serverless.service.provider.compiledCloudFormationTemplate.Resources['LeoRegister0']
-      .Properties['hello-serverless-leo-world-dev-prename-test_hello-helloNodeWorld'].name).to.equal('prename-test_hello-helloNodeWorld')
-    expect(sls.serverless.service.provider.compiledCloudFormationTemplate.Resources['LeoRegister0']
       .Properties['hello-serverless-leo-world-dev-prename-helloNodeWorld'].name).to.equal('prename-helloNodeWorld')
+    expect(sls.serverless.service.provider.compiledCloudFormationTemplate.Resources['LeoRegister0']
+      .Properties['hello-serverless-leo-world-dev-prename2-helloNodeWorld'].name).to.equal('prename2-helloNodeWorld')
   })
   it('names the bot using lambda name if there is only one cron event', async () => {
     const sls = testServerless()

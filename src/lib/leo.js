@@ -66,8 +66,8 @@ module.exports = {
               if (!botPrefix && !sourceQueue && leoEvents.length > 1) {
                 botSuffix = `-${eventIndex}${botSuffix}`
               }
-              // Only add the queue to the bot name if there are multiple events
-              if (sourceQueue && leoEvents.length > 1) {
+              // Only add the queue to the bot name if there are multiple events and no prefix
+              if (sourceQueue && !botPrefix && leoEvents.length > 1) {
                 botId = `${this.serverless.service.service}-${stage}-${botPrefix}${sourceQueue}-${ymlFunctionName}${botSuffix}`
               } else {
                 botId = `${this.serverless.service.service}-${stage}-${botPrefix}${ymlFunctionName}${botSuffix}`
