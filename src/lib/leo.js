@@ -28,11 +28,12 @@ module.exports = {
     const registrations = []
     const botIds = []
 
-    function addInstallProperty (logicalId, installProperty) {
-      if (botIds.includes(installProperty.id)) {
-        throw new Error(`Bot IDs must be unique. ${installProperty.id} has already been added to the cloudformation.`)
+    function addInstallProperty (botId, installProperty) {
+      if (botIds.includes(botId)) {
+        throw new Error(`Bot IDs must be unique. ${botId} has already been added to the cloudformation.`)
       }
-      botIds.push(installProperty.id)
+      installProperty.id = botId
+      botIds.push(botId)
       if (registrations.length === 0) {
         registrations.push(cloneDeep(customInstall))
       }
@@ -41,7 +42,7 @@ module.exports = {
         currentRegister = cloneDeep(customInstall)
         registrations.push(currentRegister)
       }
-      currentRegister.Properties[logicalId] = installProperty
+      currentRegister.Properties[botId] = installProperty
     }
 
     return BbPromise.each(
@@ -52,17 +53,26 @@ module.exports = {
         const logicalId = this.provider.naming.getLambdaLogicalId(ymlFunctionName)
 
         if (leoEvents.length > 0) {
-          leoEvents.forEach(leoEvent => {
+          leoEvents.forEach((leoEvent, eventIndex) => {
             const config = leoEvent.leo instanceof Object ? leoEvent.leo : false
             const prefix = config && config.prefix ? `${config.prefix}` : undefined
             const botPrefix = prefix ? `${prefix}-` : ''
             const sourceQueue = config ? config.queue : leoEvent.leo
             const botNumbers = times((config && config.botCount) || 1, Number)
             botNumbers.forEach(botNumber => {
-              const botSuffix = botNumber > 0 ? '-' + botNumber : ''
-              let botId = `${this.serverless.service.service}-${stage}-${botPrefix}${ymlFunctionName}${botSuffix}`
+              let botId
+              let botSuffix = botNumber > 0 ? '-' + botNumber : ''
+              // If there is no botPrefix, no source queue and multiple bots: add the eventIndex to the botSuffix (botId ultimately)
+              if (!botPrefix && !sourceQueue && leoEvents.length > 1) {
+                botSuffix = `-${eventIndex}${botSuffix}`
+              }
+              // Only add the queue to the bot name if there are multiple events and no prefix
+              if (sourceQueue && !botPrefix && leoEvents.length > 1) {
+                botId = `${this.serverless.service.service}-${stage}-${botPrefix}${sourceQueue}-${ymlFunctionName}${botSuffix}`
+              } else {
+                botId = `${this.serverless.service.service}-${stage}-${botPrefix}${ymlFunctionName}${botSuffix}`
+              }
               const installProperty = {
-                id: botId,
                 type: 'cron',
                 settings: {
                   botNumber,
@@ -72,19 +82,17 @@ module.exports = {
                   Ref: logicalId
                 }
               }
-              if (config && config.cron) {
-                installProperty.time = config.cron
-              }
               if (sourceQueue) {
-                botId = `${this.serverless.service.service}-${stage}-${botPrefix}${sourceQueue}-${ymlFunctionName}${botSuffix}`
-                installProperty.id = botId
                 installProperty.settings.source = sourceQueue
                 installProperty.settings.queue = sourceQueue
               }
+              if (config && config.cron) {
+                installProperty.time = config.cron
+              }
               if (config && config.name) {
-                installProperty.name = config.name + botSuffix
+                installProperty.name = config.name
               } else {
-                installProperty.name = functionObj.botName ? functionObj.botName + botSuffix : botId.replace(`${this.serverless.service.service}-${stage}-`, '')
+                installProperty.name = botId.replace(`${this.serverless.service.service}-${stage}-`, '')
               }
               if (config && config.codeOverrides) {
                 installProperty.settings.codeOverrides = config.codeOverrides

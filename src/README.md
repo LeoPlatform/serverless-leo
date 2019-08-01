@@ -15,6 +15,13 @@ If you don't have serverless framework globally installed
 npm install serverless -g
 ```
 
+## Migrate an existing leo microservice to leo
+Copy the migrateToServerless.js file into your existing microservice directory.
+```
+node migrateToServerless.js
+```
+See additional notes within the migrateToServerless.js script.
+
 ## Create a new NodeJS Leo Microservice and Bot
 ```
 serverless create --template-url https://github.com/LeoPlatform/serverless-leo/tree/master/templates/microservice -p my-microservice
