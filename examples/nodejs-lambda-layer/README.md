@@ -5,7 +5,7 @@
 #### Serverless will default this service to be named layer-${stage}. EG layer-test
 ## Reference layers
 By default lambda layers create an export from the stack. EG LeoLambdaLayerQualifiedArn
-##### This layer could be referenced by a lambda within another stack like this:
+##### Reference the layer in a lambda from another stack like this:
 ```
 layers:
  - ${cf:layer-${self:provider.stage}.LeoLambdaLayerQualifiedArn}
@@ -20,4 +20,4 @@ externals: [
   nodeExternals({ modulesDir: '../layer/src/leo/nodejs/node_modules' }),
 ],
 ```
-##### The webpack-node-externals package looks through the node_modules directory and excludes what it finds there from the webpack build.
+The webpack-node-externals package looks through the node_modules directory and excludes what it finds there from the webpack build.
