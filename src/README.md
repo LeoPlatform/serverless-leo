@@ -15,7 +15,7 @@ If you don't have serverless framework globally installed
 npm install serverless -g
 ```
 
-## Migrate an existing leo microservice to leo
+## Migrate an existing leo microservice to serverless
 Copy the migrateToServerless.js file into your existing microservice directory.
 ```
 node migrateToServerless.js
