@@ -16,6 +16,7 @@ const microserviceDirectory = path.join(__dirname, process.argv[2] || '')
 async function recursiveFind (regex, absPath = __dirname, options = {}) {
   const matchFolders = options.matchFolders
   const deepFolderMatch = options.deepFolderMatch
+  const ignoreRegex = options.ignoreRegex
 
   const matchedFiles = []
   const filesFolders = await new Promise((resolve, reject) => {
@@ -27,6 +28,10 @@ async function recursiveFind (regex, absPath = __dirname, options = {}) {
     })
   })
   await Promise.all(filesFolders.map(async ff => {
+    if (ignoreRegex.test(ff)) {
+      // Skip if it matches the ignore regular expression
+      return
+    }
     const isDirectory = await new Promise((resolve, reject) => {
       fs.stat(path.join(absPath, ff), (err, stats) => {
         if (err) {
@@ -69,11 +74,17 @@ function replaceObject (obj) {
   return string
 }
 
-recursiveFind(/package\.json/, microserviceDirectory).then(packageJsons => {
+recursiveFind(/package\.json/, microserviceDirectory, { ignoreRegex: /node_modules/ }).then(packageJsons => {
   packageJsons.forEach(packageJsonPath => {
     const packageJson = require(packageJsonPath)
     let directory = packageJsonPath.replace(microserviceDirectory, '').replace(/\\/g, '/').replace(/[^/]*\/package.json/, '').replace(/^\//, '')
     let serverlessYml
+    if (!packageJson.config) {
+      console.log('Skipping: missing config in package.json', packageJsonPath)
+    }
+    if (!packageJson.config.leo) {
+      console.log('Skipping: missing config.leo in package.json', packageJsonPath)
+    }
     if (packageJson.config.leo.type === 'microservice') {
       serverlessYml = `service: NAME_THE_MICROSERVICE
 
