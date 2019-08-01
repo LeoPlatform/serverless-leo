@@ -1,0 +1,12 @@
+service: layer
+
+provider:
+  name: aws
+  runtime: nodejs10.x
+  stage: ${{opt:stage, 'test'}}
+  region: ${{opt:region, 'us-east-1'}}
+  variableSyntax: "\\${{([ ~:a-zA-Z0-9._@\\'\",\\-\\/\\(\\)]+?)}}" # Allow Cloudformation to use ${}. Serverless will use ${{}}.
+
+layers:
+  leo:
+    path: ./leo
