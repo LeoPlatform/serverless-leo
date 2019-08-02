@@ -19,7 +19,7 @@ layers:
 ```
 
 ### Exclude dependencies from webpack
-In order to shrink the package sizes of lambdas that use a layer, the dependencies that are provided by the layer must be excluded from the webpack config of the lambda that is using it. To do this, use the webpack-node-externals package (https://www.npmjs.com/package/webpack-node-externals).
+In order to shrink the package sizes of lambdas that use a layer, the dependencies that are provided by the layer must be excluded from the webpack config of the lambda that is using it. To do this, use the [webpack-node-externals](https://www.npmjs.com/package/webpack-node-externals) package.
 #### Within the webpack.config.js file externals array for the lambda:
 ```
 externals: [
