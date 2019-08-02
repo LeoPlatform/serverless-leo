@@ -11,9 +11,9 @@ layers:
  - ${cf:layer-${self:provider.stage}.LeoLambdaLayerQualifiedArn}
 ```
 
-## Exclude dependencies from webpack
-In order to exclude dependencies form the webpack use the webpack-node-externals package (https://www.npmjs.com/package/webpack-node-externals).
-#### Within the webpack.config.js file externals array:
+### Exclude dependencies from webpack
+In order to shrink the package sizes of lambdas that use a layer, the dependencies that are provided by the layer must be excluded from the webpack config of the lambda that is using it. To do this, use the webpack-node-externals package (https://www.npmjs.com/package/webpack-node-externals).
+#### Within the webpack.config.js file externals array for the lambda:
 ```
 externals: [
   'aws-sdk',
