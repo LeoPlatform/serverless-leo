@@ -1,8 +1,15 @@
 # serverless-leo nodejs leo layer example
 
 #### In the /leo/nodejs/ directory
-```npm install```
-#### Serverless will default this service to be named layer-${stage}. EG layer-test
+```
+npm install
+```
+#### When deployed serverless will default this service to be named layer-${stage}. EG layer-test
+Deploy the layer stack to a specific stage
+#### In the directory containing the serverless.yml for nodejs-lambda-layer
+```
+serverless deploy -s test
+```
 ## Reference layers
 By default lambda layers create an export from the stack. EG LeoLambdaLayerQualifiedArn
 ##### Reference the layer in a lambda from another stack like this:
@@ -11,9 +18,9 @@ layers:
  - ${cf:layer-${self:provider.stage}.LeoLambdaLayerQualifiedArn}
 ```
 
-## Exclude dependencies from webpack
-In order to exclude dependencies form the webpack use the webpack-node-externals package (https://www.npmjs.com/package/webpack-node-externals).
-#### Within the webpack.config.js file externals array:
+### Exclude dependencies from webpack
+In order to shrink the package sizes of lambdas that use a layer, the dependencies that are provided by the layer must be excluded from the webpack config of the lambda that is using it. To do this, use the [webpack-node-externals](https://www.npmjs.com/package/webpack-node-externals) package.
+#### Within the webpack.config.js file externals array for the lambda:
 ```
 externals: [
   'aws-sdk',
