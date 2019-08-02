@@ -77,15 +77,18 @@ function replaceObject (obj) {
 recursiveFind(/package\.json/, microserviceDirectory, { ignoreRegex: /node_modules/ }).then(packageJsons => {
   packageJsons.forEach(packageJsonPath => {
     const packageJson = require(packageJsonPath)
-    let directory = packageJsonPath.replace(microserviceDirectory, '').replace(/\\/g, '/').replace(/[^/]*\/package.json/, '').replace(/^\//, '')
+    let directory = packageJsonPath.replace(microserviceDirectory, '').replace(/\\/g, '/').replace(/\/package.json/, '').replace(/^\//, '')
     let serverlessYml
     if (!packageJson.config) {
       console.log('Skipping: missing config in package.json', packageJsonPath)
+      return
     }
     if (!packageJson.config.leo) {
       console.log('Skipping: missing config.leo in package.json', packageJsonPath)
+      return
     }
     if (packageJson.config.leo.type === 'microservice') {
+      let hasLeoCliConfig = fs.existsSync(path.join(microserviceDirectory, directory, 'leo_cli_config.js'))
       serverlessYml = `service: NAME_THE_MICROSERVICE
 
 plugins:
@@ -113,7 +116,7 @@ custom:
     leoStack: StagingBus
   prod:
     leoStack: ProdBus
-  leoDeployParams: \${{file(../node_modules/serverless-leo/leoCliDeployAccessor.js)}} # Pulling in deployment config from leo_cli_config
+  ${hasLeoCliConfig ? '' : '# '}leoDeployParams: \${{file(../node_modules/serverless-leo/leoCliDeployAccessor.js)}} # Pulling in deployment config from leo_cli_config
 
 provider:
   name: aws
@@ -130,11 +133,11 @@ functions:
 
 resources:
   - \${{file(../node_modules/serverless-leo/includeResources.js)}} # Auto-include resources recursively from resourceFolders that matchResourcePatterns
-  - \${{file(../node_modules/serverless-leo/defaultLeoParameters.js)}} # Apply Leo Parameters to Cloudformation - requires self:custom.leoDeployParams
+  ${hasLeoCliConfig ? '' : '# '}- \${{file(../node_modules/serverless-leo/defaultLeoParameters.js)}} # Apply Leo Parameters to Cloudformation - requires self:custom.leoDeployParams
 `
     } else {
-      serverlessYml = `${packageJson.name || 'NAME-THE-BOT'}:
-  handler: ${directory}${packageJson.name || 'NAME-THE-BOT'}/index.handler
+      serverlessYml = `${packageJson.name || 'NAME_THE_BOT'}:
+  handler: ${directory}/index.handler
   description: ${packageJson.description}
   memorySize: ${packageJson.config.leo.memory || 256}
   timeout: ${packageJson.config.leo.timeout || 300}
@@ -181,8 +184,8 @@ resources:
         serverlessYml += `\n    - http:`
         serverlessYml += `\n        path: ${packageJson.config.leo.uri.replace(/.*:\//, '')}`
         serverlessYml += `\n        method: post`
-        serverlessYml += `\n        cors: ${packageJson.config.leo.secure ? 'true' : 'false'}`
         serverlessYml += `\n        integration: lambda-proxy`
+        serverlessYml += `\n        cors: true`
       }
       serverlessYml += '\n'
     }
