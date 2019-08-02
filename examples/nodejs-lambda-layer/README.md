@@ -1,8 +1,15 @@
 # serverless-leo nodejs leo layer example
 
 #### In the /leo/nodejs/ directory
-```npm install```
-#### Serverless will default this service to be named layer-${stage}. EG layer-test
+```
+npm install
+```
+#### When deployed serverless will default this service to be named layer-${stage}. EG layer-test
+Deploy the layer stack to a specific stage
+#### In the directory containing the serverless.yml for nodejs-lambda-layer
+```
+serverless deploy -s test
+```
 ## Reference layers
 By default lambda layers create an export from the stack. EG LeoLambdaLayerQualifiedArn
 ##### Reference the layer in a lambda from another stack like this:
