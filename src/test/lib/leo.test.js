@@ -184,6 +184,30 @@ describe('compileLeo', () => {
     expect(sls.serverless.service.provider.compiledCloudFormationTemplate.Resources['LeoRegister0']
       .Properties['hello-serverless-leo-world-dev-prename2-helloNodeWorld'].name).to.equal('prename2-helloNodeWorld')
   })
+  it('names the bot using the suffix in config in events', async () => {
+    const sls = testServerless()
+    const lambda = cloneDeep(helloNodeWorldLambda)
+    lambda.events = [
+      {
+        'leo': {
+          'queue': 'test_hello',
+          'suffix': 'dest_queue'
+        }
+      },
+      {
+        'leo': {
+          'cron': '* * * * * *',
+          'prefix': 'prename2'
+        }
+      }
+    ]
+    sls.serverless.service.functions.helloNodeWorld = lambda
+    await sls.compileLeo()
+    expect(sls.serverless.service.provider.compiledCloudFormationTemplate.Resources['LeoRegister0']
+      .Properties).to.haveOwnProperty('hello-serverless-leo-world-dev-test_hello-helloNodeWorld-dest_queue')
+    expect(sls.serverless.service.provider.compiledCloudFormationTemplate.Resources['LeoRegister0']
+      .Properties['hello-serverless-leo-world-dev-prename2-helloNodeWorld'].name).to.equal('prename2-helloNodeWorld')
+  })
   it('names the bot using lambda name if there is only one cron event', async () => {
     const sls = testServerless()
     const lambda = cloneDeep(helloNodeWorldLambda)

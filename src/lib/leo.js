@@ -56,12 +56,13 @@ module.exports = {
           leoEvents.forEach((leoEvent, eventIndex) => {
             const config = leoEvent.leo instanceof Object ? leoEvent.leo : false
             const prefix = config && config.prefix ? `${config.prefix}` : undefined
+            const suffix = config && config.suffix ? `${config.suffix}` : undefined
             const botPrefix = prefix ? `${prefix}-` : ''
             const sourceQueue = config ? config.queue : leoEvent.leo
             const botNumbers = times((config && config.botCount) || 1, Number)
             botNumbers.forEach(botNumber => {
               let botId
-              let botSuffix = botNumber > 0 ? '-' + botNumber : ''
+              let botSuffix = suffix ? `-${suffix}` : botNumber > 0 ? '-' + botNumber : ''
               // If there is no botPrefix, no source queue and multiple bots: add the eventIndex to the botSuffix (botId ultimately)
               if (!botPrefix && !sourceQueue && leoEvents.length > 1) {
                 botSuffix = `-${eventIndex}${botSuffix}`
@@ -76,7 +77,8 @@ module.exports = {
                 type: 'cron',
                 settings: {
                   botNumber,
-                  prefix
+                  prefix,
+                  suffix
                 },
                 lambdaName: {
                   Ref: logicalId
