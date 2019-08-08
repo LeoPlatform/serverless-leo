@@ -52,8 +52,8 @@ functions:
   world:
     handler: index.handler
     events:
-		  - leo
-			    cron: 0 0 1 * * *  # Trigger Lambda from a Leo Cron (down to minute)
+      - leo:
+          cron: 0 0 1 * * *  # Trigger Lambda from a Leo Cron (down to minute)
 ```
 
 ## Deploy your microservice
@@ -93,8 +93,8 @@ Create a "bot" that will run on a cron schedule. Only one lambda will run at any
 world:
   handler: index.handler
   events:
-  	- leo:
-		  cron: 0 0 1 * * * 
+    - leo:
+        cron: 0 0 1 * * * 
 ```
 The bot will be named the same as the lambda.
 
@@ -104,9 +104,9 @@ Create multiple bots using the same lambda by adding "botCount". This will creat
 world:
   handler: index.handler
   events:
-	- leo:
-		  queue: helloWorldTestQueue
-  		botCount: 4
+    - leo:
+        queue: helloWorldTestQueue
+        botCount: 4
 ```
 This allows you to partition the queue, or change the configuration of the bot based on the value of the variable at run time.
 
@@ -116,8 +116,8 @@ Create bots without a trigger by adding "register: true".
 world:
   handler: index.handler
   events:
-	- leo:
-      register: true
+    - leo:
+        register: true
 ```
 
 ### LeoRegister configuration
@@ -132,3 +132,15 @@ custom:
     leoRegister: arn:aws:lambda:us-east-1:123456:function:TestBus-LeoInstallFunction-2IMP25UOQ64G
 ```
 In this example leoStack would be used when deployed using --stage dev. leoRegister would be used when using --stage test
+
+### Invoke local bot
+You can invoke a bot to run on your local machine as if it were running in the cloud. It will respect the checkpoint and update it as it progresses.
+##### Run it locally with this command
+```
+serverless invoke-bot -s test -f your_function_name
+```
+#### Options - in order to run a specific bot there are additional options you can pass
+##### -f/--functionName The name of the function the bot uses.
+##### -s/--stage The stage of the microservice.
+##### -n/--name The name of the bot. A regular expression will be used to compare against the prefix, suffix, name, queue, and cron on the bot.
+##### -b/--botNumber The botNumber to execute. If there is no suffix/prefix/queue and there are multiple bots for the lambda, the botNumber can be used to identify the bot.
