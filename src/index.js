@@ -151,6 +151,7 @@ class ServerlessLeo {
         }
         const botInfo = utils.getBotInfo(this.serverless.service.service, stage, functionKey, serverlessJson[functionKey].events, eventIndex, event, botNumber)
         event.id = botInfo.id
+        this.serverless.cli.log(`Invoking local lambda ${functionKey} with data: ${JSON.stringify(event)}`)
         return execSync(`serverless invoke local -f ${functionKey} -d ${JSON.stringify(event)}`, { stdio: 'inherit' })
       }
     }

@@ -102,13 +102,13 @@ const ymlToJson = yml => {
       let line = actualLine
       const spaceMatch = line.match(spaceRegex)
       const indentation = spaceMatch ? spaceMatch.length : 0
-      if (/^ *-/.test(line)) {
+      if (/^[\s]*-/.test(line)) {
         line = line.replace(/-/, '')
         isArrayItem = true
       }
-      const isSingleValue = !/^[A-Za-z0-9 ]*:/.test(line)
-      const singleValue = line.replace(/^[\s]*/, '').replace(/[\s]*$/, '')
-      const splitLine = line.replace(spaceRegex, '').split(':').map(i => i.replace(/^[\s]*/, '').replace(/[\s]*$/, ''))
+      const splitLine = line.replace(spaceRegex, '').split(/:\s/).map(i => i.replace(/^[\s]*/, '').replace(/[\s]*$/, ''))
+      const endingColonRegex = /:$/
+      const key = splitLine[0].replace(endingColonRegex, '')
       if (indentation < section.length) {
         section = section.slice(0, indentation)
       }
@@ -122,22 +122,18 @@ const ymlToJson = yml => {
           mutateViaPath(json, section, [])
           objToManipulate = getObjViaPath(json, section)
         }
-        if (isSingleValue) {
-          objToManipulate.push(singleValue)
+        if (splitLine[1] === undefined && !endingColonRegex.test(splitLine[0])) {
+          objToManipulate.push(key)
         } else {
           const newObject = {}
-          newObject[splitLine[0]] = splitLine[1] === '' ? {} : splitLine[1]
+          newObject[key] = splitLine[1] === '' ? {} : splitLine[1]
           objToManipulate.push(newObject)
+          section.push(objToManipulate.length - 1)
         }
-        section.push(objToManipulate.length - 1)
       } else {
-        if (isSingleValue) {
-          mutateViaPath(json, section, singleValue)
-        } else {
-          objToManipulate[splitLine[0]] = splitLine[1] || ''
-        }
+        objToManipulate[key] = splitLine[1] || ''
       }
-      section.push(splitLine[0])
+      section.push(key)
     })
     return json
   } catch (err) {

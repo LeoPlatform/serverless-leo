@@ -135,7 +135,7 @@ In this example leoStack would be used when deployed using --stage dev. leoRegis
 
 ### Invoke local bot
 You can invoke a bot to run on your local machine as if it were running in the cloud. It will respect the checkpoint and update it as it progresses.
-##### Run it locally with this command
+##### Run it locally with this command (from the main microservice directory)
 ```
 serverless invoke-bot -s test -f your_function_name
 ```
