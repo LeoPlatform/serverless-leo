@@ -3,6 +3,7 @@
 const cloneDeep = require('lodash/cloneDeep')
 const times = require('lodash/times')
 const BbPromise = require('bluebird')
+const { getBotInfo } = require('./utils')
 
 module.exports = {
   compileLeo () {
@@ -28,12 +29,11 @@ module.exports = {
     const registrations = []
     const botIds = []
 
-    function addInstallProperty (botId, installProperty) {
-      if (botIds.includes(botId)) {
-        throw new Error(`Bot IDs must be unique. ${botId} has already been added to the cloudformation.`)
+    function addInstallProperty (installProperty) {
+      if (botIds.includes(installProperty.id)) {
+        throw new Error(`Bot Ids must be unique. ${installProperty.id} has already been added to the cloudformation.`)
       }
-      installProperty.id = botId
-      botIds.push(botId)
+      botIds.push(installProperty.id)
       if (registrations.length === 0) {
         registrations.push(cloneDeep(customInstall))
       }
@@ -42,7 +42,7 @@ module.exports = {
         currentRegister = cloneDeep(customInstall)
         registrations.push(currentRegister)
       }
-      currentRegister.Properties[botId] = installProperty
+      currentRegister.Properties[installProperty.id] = installProperty
     }
 
     return BbPromise.each(
@@ -55,50 +55,37 @@ module.exports = {
         if (leoEvents.length > 0) {
           leoEvents.forEach((leoEvent, eventIndex) => {
             const config = leoEvent.leo instanceof Object ? leoEvent.leo : false
-            const prefix = config && config.prefix ? `${config.prefix}` : undefined
-            const botPrefix = prefix ? `${prefix}-` : ''
-            const sourceQueue = config ? config.queue : leoEvent.leo
             const botNumbers = times((config && config.botCount) || 1, Number)
             botNumbers.forEach(botNumber => {
-              let botId
-              let botSuffix = botNumber > 0 ? '-' + botNumber : ''
-              // If there is no botPrefix, no source queue and multiple bots: add the eventIndex to the botSuffix (botId ultimately)
-              if (!botPrefix && !sourceQueue && leoEvents.length > 1) {
-                botSuffix = `-${eventIndex}${botSuffix}`
-              }
-              // Only add the queue to the bot name if there are multiple events and no prefix
-              if (sourceQueue && !botPrefix && leoEvents.length > 1) {
-                botId = `${this.serverless.service.service}-${stage}-${botPrefix}${sourceQueue}-${ymlFunctionName}${botSuffix}`
-              } else {
-                botId = `${this.serverless.service.service}-${stage}-${botPrefix}${ymlFunctionName}${botSuffix}`
-              }
+              const {
+                id,
+                cron,
+                name,
+                prefix,
+                queue,
+                register,
+                suffix
+              } = getBotInfo(this.serverless.service.service, stage, ymlFunctionName, leoEvents, eventIndex, config, botNumber)
+
               const installProperty = {
+                id,
+                name,
+                time: cron,
                 type: 'cron',
                 settings: {
                   botNumber,
-                  prefix
+                  codeOverrides: config && config.codeOverrides,
+                  prefix,
+                  queue,
+                  source: queue,
+                  suffix
                 },
                 lambdaName: {
                   Ref: logicalId
                 }
               }
-              if (sourceQueue) {
-                installProperty.settings.source = sourceQueue
-                installProperty.settings.queue = sourceQueue
-              }
-              if (config && config.cron) {
-                installProperty.time = config.cron
-              }
-              if (config && config.name) {
-                installProperty.name = config.name
-              } else {
-                installProperty.name = botId.replace(`${this.serverless.service.service}-${stage}-`, '')
-              }
-              if (config && config.codeOverrides) {
-                installProperty.settings.codeOverrides = config.codeOverrides
-              }
-              if (sourceQueue || (config && (config.cron || config.register))) {
-                addInstallProperty(botId, installProperty)
+              if (queue || cron || register) {
+                addInstallProperty(installProperty)
               }
             })
           })
