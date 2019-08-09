@@ -150,9 +150,15 @@ class ServerlessLeo {
           throw new Error('Could not match the bot name with the bot configurations')
         }
         const botInfo = utils.getBotInfo(this.serverless.service.service, stage, functionKey, serverlessJson[functionKey].events, eventIndex, event, botNumber)
-        event.id = botInfo.id
+        event.botId = botInfo.id
+        event.__cron = {
+          id: botInfo.id,
+          iid: '0',
+          ts: Date.now(),
+          force: true
+        }
         this.serverless.cli.log(`Invoking local lambda ${functionKey} with data: ${JSON.stringify(event)}`)
-        return execSync(`serverless invoke local -f ${functionKey} -d ${JSON.stringify(event)}`, { stdio: 'inherit' })
+        return execSync(`serverless invoke local -f ${functionKey} -d ${JSON.stringify(JSON.stringify(event))}`, { stdio: 'inherit' })
       }
     }
   }
