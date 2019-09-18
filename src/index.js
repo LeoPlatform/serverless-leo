@@ -158,7 +158,8 @@ class ServerlessLeo {
           force: true
         }
         this.serverless.cli.log(`Invoking local lambda ${functionKey} with data: ${JSON.stringify(event)}`)
-        return execSync(`serverless invoke local -f ${functionKey} -d ${JSON.stringify(JSON.stringify(event))}`, { stdio: 'inherit' })
+        const environmentSetString = Object.entries(process.env).filter(i => !/ /.test(i[1])).map(([key, value]) => ` -e ${key}="${value}"`).join('')
+        return execSync(`serverless invoke local -f ${functionKey} -d ${JSON.stringify(JSON.stringify(event))}${environmentSetString}`, { stdio: 'inherit' })
       }
     }
   }
