@@ -79,3 +79,7 @@ examples/python/venv
 # More
 .vscode
 *.code-workspace
+
+
+# Ignore .git directory
+.git
