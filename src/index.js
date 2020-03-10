@@ -57,10 +57,6 @@ class ServerlessLeo {
           name: {
             usage: 'Specify the name of the bot',
             shortcut: 'n'
-          },
-          stage: {
-            usage: 'Specify the stage of the bot',
-            shortcut: 's'
           }
         }
       }
@@ -100,7 +96,7 @@ class ServerlessLeo {
           .then(this.compileLeo)
       },
       'invoke-bot:leo-local': () => {
-        const { functionName, name, stage = 'test', botNumber = 0 } = this.serverless.pluginManager.cliOptions
+        const { functionName, name, botNumber = 0 } = this.serverless.pluginManager.cliOptions
         const lambdaName = functionName || name
         const regex = new RegExp(lambdaName)
         const functions = Object.keys(this.serverless.service.functions)
@@ -149,7 +145,7 @@ class ServerlessLeo {
         if (!event) {
           throw new Error('Could not match the bot name with the bot configurations')
         }
-        const botInfo = utils.getBotInfo(this.serverless.service.service, stage, functionKey, serverlessJson[functionKey].events, eventIndex, event, botNumber)
+        const botInfo = utils.getBotInfo(this.serverless.service.service, this.serverless.service.provider.stage, functionKey, serverlessJson[functionKey].events, eventIndex, event, botNumber)
         event.botId = botInfo.id
         event.__cron = {
           id: botInfo.id,

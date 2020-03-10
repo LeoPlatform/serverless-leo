@@ -57,7 +57,7 @@ const getBotInfo = (serviceName, stage, ymlFunctionName, leoEvents, leoEventInde
   const queue = config ? config.queue : leoEvents[leoEventIndex].leo
   let botSuffix = suffix ? `-${suffix}` : botNumber > 0 ? '-' + botNumber : ''
   // If there is no botPrefix, no source queue and multiple bots: add the eventIndex to the botSuffix (bot id ultimately)
-  if (!botPrefix && !queue && leoEvents.length > 1) {
+  if (!botPrefix && !suffix && !queue && leoEvents.length > 1) {
     botSuffix = `-${leoEventIndex}${botSuffix}`
   }
   // Only add the queue to the bot name if there are multiple events and no prefix
