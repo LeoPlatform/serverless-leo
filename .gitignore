@@ -63,8 +63,6 @@ typings/
 # serverless cloudformation output
 .serverless/
 
-package-lock.json
-
 # java-quickstart gradle build directory
 examples/java-quickstart/.gradle/
 examples/java-quickstart/build/
