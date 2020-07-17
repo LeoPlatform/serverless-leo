@@ -74,6 +74,7 @@ module.exports = {
                 type: 'cron',
                 settings: {
                   botNumber,
+                  botCount: config.botCount,
                   codeOverrides: config && config.codeOverrides,
                   prefix,
                   queue,
