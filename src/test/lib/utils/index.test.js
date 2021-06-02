@@ -9,14 +9,17 @@ describe('utils', () => {
     fs.removeSync(testFilePath)
     fs.removeSync(replaceDir)
   })
-  it('replaces text in files', () => {
+  it('replaces text pairs in files', () => {
     // Arrage
-    fs.writeFileSync(testFilePath, 'Hey TOKEN_REPLACE! Can I replace TOKEN_REPLACE again?')
+    fs.writeFileSync(testFilePath, 'Hey TOKEN_REPLACE, TOKEN2_REPLACE! Can I replace TOKEN_REPLACE again?')
     // Act
-    utils.replaceTextInFile(testFilePath, 'TOKEN_REPLACE', 'There')
+    utils.replaceTextPairsInFile(testFilePath, [
+      ['TOKEN_REPLACE', 'there'],
+      ['TOKEN2_REPLACE', 'friend']
+    ])
     // Assert
     const content = fs.readFileSync(testFilePath, { encoding: 'utf8' })
-    expect(content).to.be.string('Hey There! Can I replace There again?')
+    expect(content).to.be.string('Hey there, friend! Can I replace there again?')
   })
   it('replaces renames tokens in filenames recursively', () => {
     // Arrange

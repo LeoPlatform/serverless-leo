@@ -1,9 +1,11 @@
 const fs = require('fs')
 
-const replaceTextInFile = (filePath, subString, newSubString) => {
-  const fileContent = fs.readFileSync(filePath).toString()
-  var re = new RegExp(subString, 'g')
-  fs.writeFileSync(filePath, fileContent.replace(re, newSubString))
+const replaceTextPairsInFile = (filePath, replacementPairs) => {
+  let fileContent = fs.readFileSync(filePath).toString()
+  replacementPairs.forEach((replacementPair) => {
+    fileContent = fileContent.replace(new RegExp(replacementPair[0], 'g'), replacementPair[1])
+  })
+  fs.writeFileSync(filePath, fileContent)
 }
 
 const getDirInfo = (folderPath) => {
@@ -41,9 +43,9 @@ const renameFilesInFolder = (folderPath, subString, newSubString) => {
   })
 }
 
-const replaceTextInFilesInFolder = (folderPath, subString, newSubString) => {
+const replaceTextPairsInFilesInFolder = (folderPath, replacementPairs) => {
   recursePathAndOperate(folderPath, (filePath) => {
-    replaceTextInFile(filePath, subString, newSubString)
+    replaceTextPairsInFile(filePath, replacementPairs)
   })
 }
 
@@ -55,6 +57,7 @@ const getBotInfo = (serviceName, stage, ymlFunctionName, leoEvents, leoEventInde
   const suffix = config && config.suffix ? `${config.suffix}` : undefined
   const botPrefix = prefix ? `${prefix}-` : ''
   const queue = config ? config.queue : leoEvents[leoEventIndex].leo
+  const destination = config ? config.destination : undefined
   let botSuffix = suffix ? `-${suffix}` : botNumber > 0 ? '-' + botNumber : ''
   // If there is no botPrefix, no source queue and multiple bots: add the eventIndex to the botSuffix (bot id ultimately)
   if (!botPrefix && !suffix && !queue && leoEvents.length > 1) {
@@ -80,6 +83,7 @@ const getBotInfo = (serviceName, stage, ymlFunctionName, leoEvents, leoEventInde
     name,
     prefix,
     queue,
+    destination,
     register: config && config.register,
     suffix
   }
@@ -165,8 +169,8 @@ const mutateViaPath = (obj, section, value) => {
 module.exports = {
   getBotInfo,
   getDirInfo,
-  replaceTextInFile,
-  replaceTextInFilesInFolder,
+  replaceTextPairsInFile,
+  replaceTextPairsInFilesInFolder,
   renameFilesInFolder,
   recursePathAndOperate,
   ymlToJson

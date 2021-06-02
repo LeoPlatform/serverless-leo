@@ -26,15 +26,44 @@ class ServerlessLeo {
       create: {
         commands: {
           bot: {
-            usage: 'Create a nodejs microservice',
+            usage: 'Create a leo bot',
             lifecycleEvents: [
               'copy-template',
               'replace-tokens'
             ],
             options: {
               name: {
-                usage: 'Specify the name of the bot',
-                shortcut: 'n'
+                usage: 'Name of the bot',
+                type: 'string',
+                shortcut: 'n',
+                required: true
+              },
+              language: {
+                usage: 'Programming language of the bot. Defaults to node',
+                type: 'string',
+                shortcut: 'l',
+                default: 'node'
+              },
+              path: {
+                usage: `Output path for the bot. Defaults to bots${path.sep}{name}`,
+                type: 'string',
+                shortcut: 'p'
+              },
+              type: {
+                usage: 'Stream type of the bot. Defaults to load',
+                type: 'string',
+                shortcut: 't',
+                default: 'load'
+              },
+              'read-queue': {
+                usage: 'Read queue. Defaults to {name}_read',
+                type: 'string',
+                shortcut: 'q' // -r reserved for aws-region
+              },
+              'write-queue': {
+                usage: 'Write queue. Defaults to {name}_write',
+                type: 'string',
+                shortcut: 'w'
               }
             }
           }
@@ -48,15 +77,18 @@ class ServerlessLeo {
         options: {
           botNumber: {
             usage: 'Specify the bot number (default is 0)',
-            shortcut: 'b'
+            shortcut: 'b',
+            type: 'string'
           },
           functionName: {
             usage: 'Specify the name of the function for the bot',
-            shortcut: 'f'
+            shortcut: 'f',
+            type: 'string'
           },
           name: {
             usage: 'Specify the name of the bot',
-            shortcut: 'n'
+            shortcut: 'n',
+            type: 'string'
           }
         }
       }
@@ -70,14 +102,36 @@ class ServerlessLeo {
 
     this.hooks = {
       'create:bot:copy-template': () => {
-        this.serverless.pluginManager.cliOptions['template-url'] = 'https://github.com/LeoPlatform/serverless-leo/tree/master/templates/bot'
-        const { name } = this.serverless.pluginManager.cliOptions
-        this.serverless.pluginManager.cliOptions['path'] = `bots${path.sep}${name}`
+        let {
+          language,
+          name,
+          path: outputPath,
+          type
+        } = this.serverless.pluginManager.cliOptions
+        outputPath = outputPath || `bots${path.sep}${name}`
+
+        const templateUrl = `https://github.com/LeoPlatform/serverless-leo/tree/master/templates/bot/${language}/${type}`
+        this.options['template-url'] = templateUrl
+        this.options.path = outputPath
+
+        this.serverless.pluginManager.cliOptions['template-url'] = templateUrl // TODO: old version of serverless?
+        this.serverless.pluginManager.cliOptions.path = outputPath // TODO: old version of serverless?
         return this.serverless.pluginManager.run(['create'])
       },
       'create:bot:replace-tokens': () => {
-        const { path, name } = this.serverless.pluginManager.cliOptions
-        utils.replaceTextInFilesInFolder(path, 'NAME_TOKEN', name)
+        const {
+          name,
+          path,
+          'read-queue': readQueue,
+          'write-queue': writeQueue
+        } = this.serverless.pluginManager.cliOptions
+        
+        const replacements = [
+          ['NAME_TOKEN', name],
+          ['READ_QUEUE_TOKEN', readQueue || `${name}_read`],
+          ['WRITE_QUEUE_TOKEN', writeQueue || `${name}_write`]
+        ]
+        utils.replaceTextPairsInFilesInFolder(path, replacements)
         return Promise.resolve()
       },
       'before:package:cleanup': () => BbPromise.bind(this).then(this.gatherBots),

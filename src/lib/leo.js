@@ -63,6 +63,7 @@ module.exports = {
                 name,
                 prefix,
                 queue,
+                destination,
                 register,
                 suffix
               } = getBotInfo(this.serverless.service.service, stage, ymlFunctionName, leoEvents, eventIndex, config, botNumber)
@@ -79,6 +80,7 @@ module.exports = {
                   prefix,
                   queue,
                   source: queue,
+                  destination,
                   suffix
                 },
                 lambdaName: {
