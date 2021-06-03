@@ -9,6 +9,6 @@ module.exports = (async () => {
     },
     target: "node",
     mode: slsw.lib.webpack.isLocal ? "development" : "production",
-    externals: ["aws-sdk", nodeExternals()], //excluding dependencies from the output bundles entirely (not even in node_modules) because externals are not being webpcked, must use webpack.includeModules = true in serverless
+    externals: ["aws-sdk"],
   };
 })();
