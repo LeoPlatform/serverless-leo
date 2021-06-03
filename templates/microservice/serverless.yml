@@ -1,7 +1,6 @@
 service: INVALID ON PURPOSE!! FILL ME IN
 
 plugins:
-  - serverless-dotenv-plugin
   - serverless-leo
   - serverless-webpack
 
@@ -25,8 +24,6 @@ custom:
         - '*.json'
         - '*.ts'
   included: ${{file(./node_modules/serverless-convention/index.js)}}
-  dotenv:
-    basePath: ./
   test:
     proper: Test
     leoStack: TestBus

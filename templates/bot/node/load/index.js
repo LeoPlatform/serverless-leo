@@ -1,22 +1,25 @@
-process.env.LEO_ENVIRONMENT = "test";
+"use strict";
 
 require("leo-config").bootstrap(require("../../leo_config"));
 const leo = require("leo-sdk");
 
-const stream = leo.load("NAME_TOKEN", "DESTINATION_TOKEN");
-
-// Write 10 events to the leo bus
-for (let i = 0; i < 10; i++) {
-  stream.write({
-    now: Date.now(),
-    index: i,
-    number: Math.round(Math.random() * 10000),
+async function lambdaHandler(event) {
+  const stream = leo.load("NAME_TOKEN", "DESTINATION_TOKEN");
+  return new Promise((resolve, reject) => {
+    const { index, number } = event;
+    stream.write({
+      now: Date.now(),
+      index,
+      number,
+    });
+    stream.end((err) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
   });
 }
-stream.end((err) => {
-  if (err) {
-    console.error("Error writing events", err);
-  } else {
-    console.log("Events loaded");
-  }
-});
+
+exports.handler = lambdaHandler;
