@@ -62,7 +62,7 @@ module.exports = {
                 cron,
                 name,
                 prefix,
-                queue,
+                source,
                 destination,
                 register,
                 suffix
@@ -78,8 +78,8 @@ module.exports = {
                   botCount: config.botCount,
                   codeOverrides: config && config.codeOverrides,
                   prefix,
-                  queue,
-                  source: queue,
+                  queue: source,
+                  source,
                   destination,
                   suffix
                 },
@@ -87,7 +87,7 @@ module.exports = {
                   Ref: logicalId
                 }
               }
-              if (queue || cron || register) {
+              if (source || cron || register) {
                 addInstallProperty(installProperty)
               }
             })

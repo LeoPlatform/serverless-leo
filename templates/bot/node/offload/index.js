@@ -8,7 +8,7 @@ const lambdaHandler = async function (settings) {
     leo.offload(
       {
         id: settings.botId,
-        queue: settings.queue,
+        queue: settings.source,
         each: function (payload, event, done) {
           leoHandler(payload, event).then(done.bind(null, null)).catch(done);
         },

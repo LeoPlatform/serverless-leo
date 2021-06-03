@@ -45,25 +45,25 @@ class ServerlessLeo {
                 default: 'node'
               },
               path: {
-                usage: `Output path for the bot. Defaults to bots${path.sep}{name}`,
+                usage: `Output path of the bot. Defaults to bots${path.sep}{name}`,
                 type: 'string',
                 shortcut: 'p'
               },
               type: {
-                usage: 'Stream type of the bot. Defaults to load',
+                usage: 'Stream type of the bot. Defaults to load [load|enrich|offload]',
                 type: 'string',
                 shortcut: 't',
                 default: 'load'
               },
-              'read-queue': {
-                usage: 'Read queue. Defaults to {name}_read',
+              source: {
+                usage: 'Source queue to read from. Defaults to {name}_source',
                 type: 'string',
-                shortcut: 'q' // -r reserved for aws-region
+                shortcut: 's'
               },
-              'write-queue': {
-                usage: 'Write queue. Defaults to {name}_write',
+              destination: {
+                usage: 'Destination queue to write to. Defaults to {name}_destination',
                 type: 'string',
-                shortcut: 'w'
+                shortcut: 'd'
               }
             }
           }
@@ -122,14 +122,14 @@ class ServerlessLeo {
         const {
           name,
           path,
-          'read-queue': readQueue,
-          'write-queue': writeQueue
+          source,
+          destination
         } = this.serverless.pluginManager.cliOptions
         
         const replacements = [
           ['NAME_TOKEN', name],
-          ['READ_QUEUE_TOKEN', readQueue || `${name}_read`],
-          ['WRITE_QUEUE_TOKEN', writeQueue || `${name}_write`]
+          ['SOURCE_TOKEN', source || `${name}_source`],
+          ['DESTINATION_TOKEN', destination || `${name}_destination`]
         ]
         utils.replaceTextPairsInFilesInFolder(path, replacements)
         return Promise.resolve()
