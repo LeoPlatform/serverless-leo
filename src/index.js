@@ -57,8 +57,7 @@ class ServerlessLeo {
               },
               source: {
                 usage: 'Source queue to read from. Defaults to {name}_source',
-                type: 'string',
-                shortcut: 's'
+                type: 'string'
               },
               destination: {
                 usage: 'Destination queue to write to. Defaults to {name}_destination',
