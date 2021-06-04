@@ -41,18 +41,15 @@ class ServerlessLeo {
               language: {
                 usage: 'Programming language of the bot. Defaults to node',
                 type: 'string',
-                shortcut: 'l',
-                default: 'node'
+                shortcut: 'l'
               },
               path: {
                 usage: `Output path of the bot. Defaults to bots${path.sep}{name}`,
-                type: 'string',
-                shortcut: 'p'
+                type: 'string'
               },
               type: {
                 usage: 'Stream type of the bot. Defaults to load [load|enrich|offload]',
                 type: 'string',
-                shortcut: 't',
                 default: 'load'
               },
               source: {
@@ -61,8 +58,7 @@ class ServerlessLeo {
               },
               destination: {
                 usage: 'Destination queue to write to. Defaults to {name}_destination',
-                type: 'string',
-                shortcut: 'd'
+                type: 'string'
               }
             }
           }
