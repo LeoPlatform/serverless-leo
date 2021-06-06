@@ -39,7 +39,7 @@ class ServerlessLeo {
                 required: true
               },
               language: {
-                usage: 'Programming language of the bot. Defaults to node',
+                usage: 'Programming language of the bot. Defaults to node [node|typescript]',
                 type: 'string',
                 shortcut: 'l'
               },

@@ -7,6 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "leo-config": "^1.1.0",
     "leo-sdk": "^5.0.12"
   },
   "devDependencies": {
@@ -14,6 +15,8 @@
     "serverless-convention": "^1.1.2",
     "serverless-leo": "latest",
     "serverless-webpack": "^5.4.0",
+    "ts-loader": "^9.2.3",
+    "typescript": "^4.3.2",
     "webpack": "^5.26.3",
     "webpack-bundle-analyzer": "^3.3.2",
     "webpack-node-externals": "^1.7.2"
