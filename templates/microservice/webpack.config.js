@@ -1,21 +1,43 @@
-// const webpack = require('webpack');
-const slsw = require('serverless-webpack');
-var nodeExternals = require('webpack-node-externals');
-// use the bunde analyzer plugin only locally when you want to drill down on your dependencies
-// const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+const path = require('path');
+const slsw = require("serverless-webpack");
 
 module.exports = (async () => {
-	return {
-		entry: slsw.lib.entries,
-		// plugins: [
-		// 	// new webpack.IgnorePlugin(/pg-native/, /\/pg\//), // if pg-native is an issue
-		// 	// new BundleAnalyzerPlugin({ analyzerMode: 'static' })
-		// ],
-		optimization: {
-			minimize: false  // We no not want to minimize our code. Easier to fix in lambda console.
-		},
-		target: 'node',
-		mode: slsw.lib.webpack.isLocal ? 'development' : 'production',
-		externals: ['aws-sdk', nodeExternals()] //excluding dependencies from the output bundles entirely (not even in node_modules) because externals are not being webpcked, must use webpack.includeModules = true in serverless
-	};
+  return {
+    entry: slsw.lib.entries,
+    externals: ["aws-sdk"],
+    mode: slsw.lib.webpack.isLocal ? "development" : "production",
+    module: {
+      rules: [
+        // all files with a `.ts` or `.tsx` extension will be handled by `ts-loader`
+        {
+          exclude: [
+            [
+              path.resolve(__dirname, ".serverless"),
+              path.resolve(__dirname, ".webpack"),
+            ],
+          ],
+          loader: "ts-loader",
+          options: {
+            experimentalWatchApi: true,
+            transpileOnly: true,
+          },
+          test: /\.(tsx?)$/,
+        },
+      ],
+    },
+    optimization: {
+      minimize: false, // We do not want to minimize our code. Easier to fix in lambda console.
+    },
+    output: {
+      filename: "[name].js",
+      libraryTarget: "commonjs",
+      path: path.join(__dirname, ".webpack"),
+    },
+    resolve: {
+      cacheWithContext: false,
+      extensions: [".mjs", ".json", ".ts", ".js"],
+      symlinks: false,
+    },
+    target: "node"
+  };
 })();

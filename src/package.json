@@ -1,6 +1,6 @@
 {
   "name": "serverless-leo",
-  "version": "1.4.6",
+  "version": "2.0.0",
   "description": "Serverless plugin for leo microservices",
   "main": "index.js",
   "directories": {
@@ -31,6 +31,7 @@
     "bluebird": "^3.5.4",
     "find-up": "^3.0.0",
     "ignore": "^5.1.1",
+    "leo-config": "^1.1.0",
     "lodash": "^4.17.15",
     "parse-gitignore": "^1.0.1"
   },

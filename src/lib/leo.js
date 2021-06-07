@@ -62,7 +62,8 @@ module.exports = {
                 cron,
                 name,
                 prefix,
-                queue,
+                source,
+                destination,
                 register,
                 suffix
               } = getBotInfo(this.serverless.service.service, stage, ymlFunctionName, leoEvents, eventIndex, config, botNumber)
@@ -77,15 +78,16 @@ module.exports = {
                   botCount: config.botCount,
                   codeOverrides: config && config.codeOverrides,
                   prefix,
-                  queue,
-                  source: queue,
+                  queue: source,
+                  source,
+                  destination,
                   suffix
                 },
                 lambdaName: {
                   Ref: logicalId
                 }
               }
-              if (queue || cron || register) {
+              if (source || cron || register) {
                 addInstallProperty(installProperty)
               }
             })

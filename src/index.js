@@ -26,15 +26,39 @@ class ServerlessLeo {
       create: {
         commands: {
           bot: {
-            usage: 'Create a nodejs microservice',
+            usage: 'Create a leo bot',
             lifecycleEvents: [
               'copy-template',
               'replace-tokens'
             ],
             options: {
               name: {
-                usage: 'Specify the name of the bot',
-                shortcut: 'n'
+                usage: 'Name of the bot',
+                type: 'string',
+                shortcut: 'n',
+                required: true
+              },
+              language: {
+                usage: 'Programming language of the bot. Defaults to node [node|typescript]',
+                type: 'string',
+                shortcut: 'l'
+              },
+              path: {
+                usage: `Output path of the bot. Defaults to bots${path.sep}{name}`,
+                type: 'string'
+              },
+              type: {
+                usage: 'Stream type of the bot. Defaults to load [load|enrich|offload]',
+                type: 'string',
+                default: 'load'
+              },
+              source: {
+                usage: 'Source queue to read from. Defaults to {name}_source',
+                type: 'string'
+              },
+              destination: {
+                usage: 'Destination queue to write to. Defaults to {name}_destination',
+                type: 'string'
               }
             }
           }
@@ -48,15 +72,18 @@ class ServerlessLeo {
         options: {
           botNumber: {
             usage: 'Specify the bot number (default is 0)',
-            shortcut: 'b'
+            shortcut: 'b',
+            type: 'string'
           },
           functionName: {
             usage: 'Specify the name of the function for the bot',
-            shortcut: 'f'
+            shortcut: 'f',
+            type: 'string'
           },
           name: {
             usage: 'Specify the name of the bot',
-            shortcut: 'n'
+            shortcut: 'n',
+            type: 'string'
           }
         }
       }
@@ -70,14 +97,36 @@ class ServerlessLeo {
 
     this.hooks = {
       'create:bot:copy-template': () => {
-        this.serverless.pluginManager.cliOptions['template-url'] = 'https://github.com/LeoPlatform/serverless-leo/tree/master/templates/bot'
-        const { name } = this.serverless.pluginManager.cliOptions
-        this.serverless.pluginManager.cliOptions['path'] = `bots${path.sep}${name}`
+        let {
+          language,
+          name,
+          path: outputPath,
+          type
+        } = this.serverless.pluginManager.cliOptions
+        outputPath = outputPath || `bots${path.sep}${name}`
+
+        const templateUrl = `https://github.com/LeoPlatform/serverless-leo/tree/master/templates/bot/${language}/${type}`
+        this.options['template-url'] = templateUrl
+        this.options.path = outputPath
+
+        this.serverless.pluginManager.cliOptions['template-url'] = templateUrl // TODO: old version of serverless?
+        this.serverless.pluginManager.cliOptions.path = outputPath // TODO: old version of serverless?
         return this.serverless.pluginManager.run(['create'])
       },
       'create:bot:replace-tokens': () => {
-        const { path, name } = this.serverless.pluginManager.cliOptions
-        utils.replaceTextInFilesInFolder(path, 'NAME_TOKEN', name)
+        const {
+          name,
+          path,
+          source,
+          destination
+        } = this.serverless.pluginManager.cliOptions
+        
+        const replacements = [
+          ['NAME_TOKEN', name],
+          ['SOURCE_TOKEN', source || `${name}_source`],
+          ['DESTINATION_TOKEN', destination || `${name}_destination`]
+        ]
+        utils.replaceTextPairsInFilesInFolder(path, replacements)
         return Promise.resolve()
       },
       'before:package:cleanup': () => BbPromise.bind(this).then(this.gatherBots),

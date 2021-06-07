@@ -1,4 +1,4 @@
-service: general
+service: INVALID ON PURPOSE!! FILL ME IN
 
 plugins:
   - serverless-leo
@@ -8,46 +8,44 @@ package:
   individually: true
 
 custom:
-  functionFolders:
-    - bots
-    - api
-  resourceFolders:
-    - cloudformation
-  matchFunctionPatterns:
-    - '*.yml'
-  matchResourcePatterns:
-    - '*.yml'
-    - '*.js'
-    - '*.json'
+  convention:
+    functions:
+      folders:
+        - api
+        - bots
+      pattern:
+        - '*.yml'
+    resources:
+      folders:
+        - cloudformation
+      pattern:
+        - '*.yml'
+        - '*.js'
+        - '*.json'
+        - '*.ts'
+  included: ${{file(./node_modules/serverless-convention/index.js)}}
   test:
-    leoRegister: TEST_LEO_INSTALL_FUNCTION_ARN
-  qa:
-    leoRegister: QA_LEO_INSTALL_FUNCTION_ARN
+    proper: Test
+    leoStack: TestBus
   staging:
-    leoRegister: STAGE_LEO_INSTALL_FUNCTION_ARN
+    proper: Staging
+    leoStack: StagingBus
   prod:
-    leoRegister: PROD_LEO_INSTALL_FUNCTION_ARN
-  leoDeployParams: ${{file(node_modules/serverless-leo/leoCliDeployAccessor.js)}} # Pulling in deployment config from leo_cli_config
-  webpack:
-    packager: 'npm'   
-    webpackConfig: 'webpack.config.js'   
-    includeModules: # Include node_modules when using externals: nodeExternals()
-      forceExclude:
-        - aws-sdk # lambda nodjs runtime has aws-sdk
+    proper: Prod
+    leoStack: ProdBus
 
 provider:
   name: aws
-  runtime: nodejs8.10
+  runtime: nodejs14.x
+  # deploymentBucket: ADD_YOUR_DEPLOYMENT_BUCKET
   stage: ${{opt:stage, 'test'}}
   environment:
     LEO_ENVIRONMENT: ${{opt:stage, 'test'}}
   region: ${{opt:region, 'us-east-1'}}
-  stackName: ${{self:custom.leoDeployParams.${{self:provider.stage}}.stack}} # Using approprate stack name from leo_cli_config
   variableSyntax: "\\${{([ ~:a-zA-Z0-9._@\\'\",\\-\\/\\(\\)]+?)}}" # Allow Cloudformation to use ${}. Serverless will use ${{}}.
 
 functions:
-  - ${{file(node_modules/serverless-leo/includeFunctions.js)}} # Auto-include functions recursively from functionFolders that matchFunctionPatterns
- 
+  - ${{self:custom.included.functions}} # Auto-include functions using serverless-convention
+
 resources:
-  - ${{file(node_modules/serverless-leo/includeResources.js)}} # Auto-include resources recursively from resourceFolders that matchResourcePatterns
-  - ${{file(node_modules/serverless-leo/defaultLeoParameters.js)}} # Apply Leo Parameters to Cloudformation
+  - ${{self:custom.included.resources}} # Auto-include resources using serverless-convention
