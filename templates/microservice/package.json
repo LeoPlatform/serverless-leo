@@ -14,7 +14,7 @@
     "serverless-convention": "^1.1.2",
     "serverless-leo": "latest",
     "serverless-webpack": "^5.4.0",
-    "webpack": "^5.26.3",
+    "serverless-rust": "^0.3.8",
     "webpack-bundle-analyzer": "^3.3.2",
     "webpack-node-externals": "^1.7.2"
   }

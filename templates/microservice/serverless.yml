@@ -3,11 +3,14 @@ service: INVALID ON PURPOSE!! FILL ME IN
 plugins:
   - serverless-leo
   - serverless-webpack
+  - serverless-rust
 
 package:
   individually: true
 
 custom:
+  rust:
+    dockerless: true
   convention:
     functions:
       folders:
