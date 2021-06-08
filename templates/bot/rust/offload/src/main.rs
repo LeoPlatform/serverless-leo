@@ -5,24 +5,23 @@ use rstreams::{events::Event, BotInvocationEvent, LeoCheckpointOptions, LeoReadO
 use rstreams::aws::AWSProvider;
 use rusoto_signature::Region;
 use lambda::{run, handler_fn};
+use anyhow::{anyhow};
 
 pub struct ExampleSdkConfig;
 
 impl ExampleSdkConfig {
-    #[allow(dead_code)]
-    pub fn dsco_test_bus() -> AllProviders {
+    pub fn bus_config() -> AllProviders {
         AllProviders::AWS(AWSProvider::new(
             Region::UsEast1,
-            "TestBus-LeoStream-R2VV0EJ6FRI9",
-            "TestBus-LeoCron-OJ8ZNCEBL8GM",
-            "TestBus-LeoEvent-FNSO733D68CR",
-            "testbus-leos3-1erchsf3l53le",
-            "TestBus-LeoKinesisStream-1XY97YYPDLVQS",
-            "TestBus-LeoFirehoseStream-1M8BJL0I5HQ34",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
         ))
     }
 }
-
 #[derive(Deserialize, Serialize, Debug)]
 struct MyReadEvent {
     suborder_id: usize,
@@ -41,7 +40,7 @@ async fn main() -> Result<(), Error> {
 
 async fn offload(event: BotInvocationEvent<()>, context: lambda::Context) -> Result<(), Error> {
 
-    let sdk = LeoSdk::new(ExampleSdkConfig::dsco_test_bus());
+    let sdk = LeoSdk::new(ExampleSdkConfig::bus_config());
 
     let bot_id = &event.bot_id;
     let source_queue = "SOURCE_TOKEN";
@@ -78,7 +77,7 @@ async fn offload(event: BotInvocationEvent<()>, context: lambda::Context) -> Res
     Ok(())
 }
 
-async fn processing_function(eid: String) -> Result<()> {
+async fn processing_function(eid: String) -> anyhow::Result<()> {
     println!("Handling event eid: {}", eid);
     Ok(())
 }

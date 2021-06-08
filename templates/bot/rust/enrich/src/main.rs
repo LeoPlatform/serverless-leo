@@ -8,16 +8,15 @@ use rstreams::events::WriteEvent;
 pub struct ExampleSdkConfig;
 
 impl ExampleSdkConfig {
-    #[allow(dead_code)]
-    pub fn dsco_test_bus() -> AllProviders {
+    pub fn bus_config() -> AllProviders {
         AllProviders::AWS(AWSProvider::new(
             Region::UsEast1,
-            "TestBus-LeoStream-R2VV0EJ6FRI9",
-            "TestBus-LeoCron-OJ8ZNCEBL8GM",
-            "TestBus-LeoEvent-FNSO733D68CR",
-            "testbus-leos3-1erchsf3l53le",
-            "TestBus-LeoKinesisStream-1XY97YYPDLVQS",
-            "TestBus-LeoFirehoseStream-1M8BJL0I5HQ34",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
         ))
     }
 }
@@ -48,7 +47,7 @@ async fn main() -> Result<(), Error> {
 
 async fn enrich(event: BotInvocationEvent<()>, context: lambda::Context) -> Result<(), Error> {
 
-    let sdk = LeoSdk::new(ExampleSdkConfig::dsco_test_bus());
+    let sdk = LeoSdk::new(ExampleSdkConfig::bus_config());
     let bot_id = &event.bot_id;
     let source_queue = "SOURCE_TOKEN";
     let dest_queue = "DESTINATION_TOKEN";
