@@ -8,7 +8,6 @@ edition = "2018"
 
 [dependencies]
 #leo
-leo-config-rs = { git = "ssh://git@bitbucket.org/dscodsco/leo-config-rs.git", branch = "master" }
 rstreams = { git = "ssh://git@bitbucket.org/dscodsco/rstreams-rs.git", branch = "master" }
 
 #lambda runtime

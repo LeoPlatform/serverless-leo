@@ -60,6 +60,8 @@ async fn enrich(event: BotInvocationEvent<()>, context: lambda::Context) -> Resu
             LeoReadOptions::default(),
             LeoWriteOptions::default().with_initial_values(&event),
             |event: Event<MyReadEvent>| {
+
+                //enrichment process here
                 futures::future::ready(match &event.payload {
                     Some(data) => Some(Ok(WriteEvent::from_read_event(
                         bot_id,
