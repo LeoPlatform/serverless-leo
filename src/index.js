@@ -113,8 +113,6 @@ class ServerlessLeo {
         this.serverless.pluginManager.cliOptions['template-url'] = templateUrl // TODO: old version of serverless?
         this.serverless.pluginManager.cliOptions.path = outputPath // TODO: old version of serverless?
         
-        console.log(path.resolve(`${__dirname}/../templates/bot/${language}/${type}`));
-
         return this.serverless.pluginManager.run(['create'])
       },
       'create:bot:replace-tokens': () => {

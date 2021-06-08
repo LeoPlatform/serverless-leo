@@ -53,12 +53,15 @@ async fn offload(event: BotInvocationEvent<()>, context: lambda::Context) -> Res
             LeoReadOptions::default(),
             LeoCheckpointOptions::Enabled.with_initial_values(&event),
             |event: Event<MyReadEvent>| async move {
+
+                //offload processing here
+
                 let results = processing_function(event.eid.clone()).await;
 
                 match results {
                     Ok(..) => Some(Ok(())),
                     Err(err) => {
-                        Some(Err(anyhow!(format!("Failed to process event, will not checkpoint {}", err))))
+                        Some(Err(anyhow!(format!("Failed to process event {}", err))))
                     }
                 }
             },

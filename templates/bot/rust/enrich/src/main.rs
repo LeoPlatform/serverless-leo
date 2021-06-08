@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use rstreams::{events::Event, BotInvocationEvent, LeoCheckpointOptions, LeoReadOptions, LeoSdk, AllProviders, LeoWriteOptions, Error};
+use rstreams::{events::Event, BotInvocationEvent, LeoReadOptions, LeoSdk, AllProviders, LeoWriteOptions, Error};
 use rstreams::aws::AWSProvider;
 use rusoto_signature::Region;
 use lambda::{run, handler_fn};
