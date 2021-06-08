@@ -107,12 +107,12 @@ class ServerlessLeo {
         outputPath = outputPath || `bots${path.sep}${name}`
 
         const templateUrl = `https://github.com/LeoPlatform/serverless-leo/tree/master/templates/bot/${language}/${type}`
-       
         this.options['template-url'] = templateUrl
         this.options.path = outputPath
+
         this.serverless.pluginManager.cliOptions['template-url'] = templateUrl // TODO: old version of serverless?
         this.serverless.pluginManager.cliOptions.path = outputPath // TODO: old version of serverless?
-       
+
         return this.serverless.pluginManager.run(['create'])
       },
       'create:bot:replace-tokens': () => {
