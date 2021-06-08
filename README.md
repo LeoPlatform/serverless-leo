@@ -19,12 +19,12 @@ npm install
 serverless create bot --name my-bot-name --type load --language node --destination my-write-queue
 ```
 
-## Rust specifc
-In order to register this lambda in your workspace, you need to add the path to the folder in your root cargo.toml workspace members.
-
 At this point, you will have a new project with a `bots` directory including your new bot. There are two things to setup before your service can be deployed.
 1. Set the name and deploymentBucket of your service in the root `serverless.yml` file
 2. Update the `leo_config.js` file to include the leo bus values your service will use
+
+## Rust specifc
+In order to register this lambda in your workspace, you need to add the relative path to the newly created folder in your root cargo.toml workspace members.
 
 Once you've made these changes, you can run `serverless deploy` which will use your default AWS_PROFILE.
 
