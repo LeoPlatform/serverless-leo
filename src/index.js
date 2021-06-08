@@ -41,7 +41,8 @@ class ServerlessLeo {
               language: {
                 usage: 'Programming language of the bot. Defaults to node [node|typescript]',
                 type: 'string',
-                shortcut: 'l'
+                shortcut: 'l',
+                default: 'node'
               },
               path: {
                 usage: `Output path of the bot. Defaults to bots${path.sep}{name}`,
@@ -111,6 +112,7 @@ class ServerlessLeo {
 
         this.serverless.pluginManager.cliOptions['template-url'] = templateUrl // TODO: old version of serverless?
         this.serverless.pluginManager.cliOptions.path = outputPath // TODO: old version of serverless?
+
         return this.serverless.pluginManager.run(['create'])
       },
       'create:bot:replace-tokens': () => {
