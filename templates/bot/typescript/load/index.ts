@@ -4,7 +4,7 @@ const leoConfig = require("leo-config")
 leoConfig.bootstrap(require("../../leo_config"));
 const leo = require("leo-sdk");
 
-async function lambdaHandler(event) {
+export async function handler(event) {
   const stream = leo.load("NAME_TOKEN", "DESTINATION_TOKEN");
   return new Promise((resolve, reject) => {
     const { index, number } = event;
@@ -22,5 +22,3 @@ async function lambdaHandler(event) {
     });
   });
 }
-
-exports.handler = lambdaHandler;
