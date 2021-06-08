@@ -35,5 +35,9 @@ async function leoHandler(payload, _event) {
   });
 }
 
-exports.handler = require("leo-sdk/wrappers/cron")(lambdaHandler);
-exports._handler = lambdaHandler; // for running locally
+const handler = require("leo-sdk/wrappers/cron")(lambdaHandler);
+
+export {
+  handler,
+  lambdaHandler as _handler // for running locally
+}
