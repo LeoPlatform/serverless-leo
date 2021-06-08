@@ -6,6 +6,7 @@ NAME_TOKEN:
     - leo:
         queue: SOURCE_TOKEN
         source: SOURCE_TOKEN
+        destination: DESTINATION_TOKEN
         name: NAME_TOKEN
   memorySize: 256
   timeout: 300

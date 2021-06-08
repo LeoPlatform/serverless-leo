@@ -1,0 +1,27 @@
+[package]
+name = "NAME_TOKEN"
+version = "0.1.0"
+authors = ["NAME_HERE"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+#leo
+leo-config-rs      = { git = "ssh://git@bitbucket.org/dscodsco/leo-config-rs.git", branch = "master" }
+rstreams        = { git = "ssh://git@bitbucket.org/dscodsco/rstreams-rs.git", branch = "master"}
+
+serde_json        = "1.0"
+serde             = { version = "1.0", features = ["derive"] }
+futures = "^0.3.5"
+futures-util = "^0.3.12"
+uuid = { version="0.8.2", features=["v4"]}
+anyhow = "1.0.38"
+chrono = "0.4.19"
+
+#lambda runtime
+lambda = { git = "https://github.com/awslabs/aws-lambda-rust-runtime/", rev = "5ae037ef9ffabdac5a2cfcd22cd2c090e104e914"}
+tokio = { version = "1.4.0", features = ["full"] }
+
+#aws
+rusoto_signature = {version="0.46.0"}

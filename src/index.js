@@ -39,31 +39,27 @@ class ServerlessLeo {
                 required: true
               },
               language: {
-                usage: 'Programming language of the bot. Defaults to node',
+                usage: 'Programming language of the bot. Defaults to node [node|typescript]',
                 type: 'string',
                 shortcut: 'l',
                 default: 'node'
               },
               path: {
                 usage: `Output path of the bot. Defaults to bots${path.sep}{name}`,
-                type: 'string',
-                shortcut: 'p'
+                type: 'string'
               },
               type: {
                 usage: 'Stream type of the bot. Defaults to load [load|enrich|offload]',
                 type: 'string',
-                shortcut: 't',
                 default: 'load'
               },
               source: {
                 usage: 'Source queue to read from. Defaults to {name}_source',
-                type: 'string',
-                shortcut: 's'
+                type: 'string'
               },
               destination: {
                 usage: 'Destination queue to write to. Defaults to {name}_destination',
-                type: 'string',
-                shortcut: 'd'
+                type: 'string'
               }
             }
           }
@@ -118,11 +114,6 @@ class ServerlessLeo {
         this.serverless.pluginManager.cliOptions.path = outputPath // TODO: old version of serverless?
         
         console.log(path.resolve(`${__dirname}/../templates/bot/${language}/${type}`));
-
-        //TODO: remove
-        this.options['template-path'] = path.resolve(`${__dirname}/../templates/bot/${language}/${type}`)
-        delete this.options['template-url'];
-        delete this.serverless.pluginManager.cliOptions['template-url'];
 
         return this.serverless.pluginManager.run(['create'])
       },
