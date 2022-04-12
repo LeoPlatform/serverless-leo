@@ -18,7 +18,7 @@ const utils = require('./lib/utils')
 // TODO: test validation phase - that it complains there are no valid sections
 
 class ServerlessLeo {
-  constructor (serverless, options) {
+  constructor(serverless, options) {
     this.serverless = serverless
     this.options = options
     this.provider = this.serverless.getProvider('aws')
@@ -76,7 +76,7 @@ class ServerlessLeo {
             shortcut: 'b',
             type: 'string'
           },
-          functionName: {
+          function: {
             usage: 'Specify the name of the function for the bot',
             shortcut: 'f',
             type: 'string'
@@ -88,13 +88,23 @@ class ServerlessLeo {
           }
         }
       }
-    }
+    };
+
+    serverless.configSchemaHandler.defineFunctionEvent(serverless.service.provider.name, "leo", {
+      type: 'object',
+      properties: {
+        cron: { type: 'string' },
+        destination: { type: 'string' },
+      },
+      required: [],
+      additionalProperties: true,
+    });
 
     Object.assign(
       this,
       validate,
       compileLeo
-    )
+    );
 
     this.hooks = {
       'create:bot:copy-template': () => {
@@ -122,7 +132,7 @@ class ServerlessLeo {
           source,
           destination
         } = this.serverless.pluginManager.cliOptions
-        
+
         const replacements = [
           ['NAME_TOKEN', name],
           ['SOURCE_TOKEN', source || `${name}_source`],
@@ -147,7 +157,7 @@ class ServerlessLeo {
           .then(this.compileLeo)
       },
       'invoke-bot:leo-local': () => {
-        const { functionName, name, botNumber = 0 } = this.serverless.pluginManager.cliOptions
+        const { function: functionName, name, botNumber = 0 } = this.serverless.pluginManager.cliOptions
         const lambdaName = functionName || name
         const regex = new RegExp(lambdaName)
         const functions = Object.keys(this.serverless.service.functions)
@@ -205,8 +215,25 @@ class ServerlessLeo {
           force: true
         }
         this.serverless.cli.log(`Invoking local lambda ${functionKey} with data: ${JSON.stringify(event)}`)
-        const environmentSetString = Object.entries(process.env).filter(i => !/ /.test(i[1])).map(([key, value]) => ` -e ${key}="${value}"`).join('')
-        return execSync(`serverless invoke local -f ${functionKey} -d ${JSON.stringify(JSON.stringify(event))}${environmentSetString}`, { stdio: 'inherit' })
+
+        let func = this.serverless.service.getFunction(functionKey);
+        let env = {};
+        Object.entries(process.env).filter(i => !/ /.test(i[1])).map(([key, value]) => { env[key] = value });
+        Object.entries(this.serverless.service.provider.environment || {}).forEach(([key, value]) => {
+          if (env[key] != null) {
+            this.serverless.service.provider.environment[key] = env[key]
+          }
+        });
+        Object.entries(func.environment || {}).forEach(([key, value]) => {
+          if (env[key] != null) {
+            func.environment[key] = value
+          }
+        });
+
+        this.options.function = functionKey;
+        this.options.data = JSON.stringify(event);
+
+        await this.serverless.pluginManager.spawn("invoke:local");
       }
     }
   }

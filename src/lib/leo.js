@@ -6,22 +6,26 @@ const BbPromise = require('bluebird')
 const { getBotInfo } = require('./utils')
 
 module.exports = {
-  compileLeo () {
+  compileLeo() {
     const allFunctions = this.serverless.service.getAllFunctions()
     const stage = this.serverless.service.provider.stage
     const custom = this.serverless.service.custom[stage] ? this.serverless.service.custom[stage] : this.serverless.service.custom
+
+    const leoStack = custom.leoStack || this.serverless.service.custom.leoStack;
+    const leoRegister = custom.leoRegister || this.serverless.service.custom.leoRegister;
+
     const cloudformation = this.serverless.service.provider.compiledCloudFormationTemplate
     const customInstall = {
       Type: 'Custom::Install',
       Properties: {}
     }
 
-    if (custom.leoRegister) {
-      customInstall.Properties.ServiceToken = custom.leoRegister
+    if (leoRegister) {
+      customInstall.Properties.ServiceToken = leoRegister
     } else {
       customInstall.Properties.ServiceToken = {
         'Fn::ImportValue': {
-          'Fn::Sub': `${custom.leoStack}-Register`
+          'Fn::Sub': `${leoStack}-Register`
         }
       }
     }
@@ -29,7 +33,7 @@ module.exports = {
     const registrations = []
     const botIds = []
 
-    function addInstallProperty (installProperty) {
+    function addInstallProperty(installProperty) {
       if (botIds.includes(installProperty.id)) {
         throw new Error(`Bot Ids must be unique. ${installProperty.id} has already been added to the cloudformation.`)
       }
@@ -94,9 +98,9 @@ module.exports = {
           })
         }
       }).then(() => {
-      registrations.forEach((leoRegister, index) => {
-        cloudformation.Resources[`LeoRegister${index}`] = leoRegister
+        registrations.forEach((leoRegister, index) => {
+          cloudformation.Resources[`LeoRegister${index}`] = leoRegister
+        })
       })
-    })
   }
 }
