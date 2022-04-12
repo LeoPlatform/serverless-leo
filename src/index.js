@@ -156,7 +156,7 @@ class ServerlessLeo {
         return BbPromise.bind(this)
           .then(this.compileLeo)
       },
-      'invoke-bot:leo-local': () => {
+      'invoke-bot:leo-local': async () => {
         const { function: functionName, name, botNumber = 0 } = this.serverless.pluginManager.cliOptions
         const lambdaName = functionName || name
         const regex = new RegExp(lambdaName)
