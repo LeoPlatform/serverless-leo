@@ -1,5 +1,21 @@
 const fs = require('fs')
 
+const reservedFields = {
+  id: true,
+  cron: true,
+  name: true,
+  time: true,
+  type: true,
+  botNumber: true,
+  botCount: true,
+  codeOverrides: true,
+  prefix: true,
+  queue: true,
+  source: true,
+  destination: true,
+  suffix: true
+};
+
 const replaceTextPairsInFile = (filePath, replacementPairs) => {
   let fileContent = fs.readFileSync(filePath).toString()
   replacementPairs.forEach((replacementPair) => {
@@ -49,7 +65,7 @@ const replaceTextPairsInFilesInFolder = (folderPath, replacementPairs) => {
   })
 }
 
-const getBotInfo = (serviceName, stage, ymlFunctionName, leoEvents, leoEventIndex, config, botNumber) => {
+const getBotInfo = (serviceName, stage, ymlFunctionName, leoEvents, leoEventIndex, config, botNumber, pluginConfig = {}) => {
   let id
   let cron
   let name
@@ -77,6 +93,15 @@ const getBotInfo = (serviceName, stage, ymlFunctionName, leoEvents, leoEventInde
   } else {
     name = id.replace(`${serviceName}-${stage}-`, '')
   }
+
+  // If botIdExcludeStage is enabled, remove the stage from the id
+  if (pluginConfig.botIdExcludeStage) {
+    id = id.replace(`${serviceName}-${stage}-`, `${serviceName}-`);
+  }
+
+  // Extract any extra fileds from the leo event
+  let extraSettings = Object.entries(config).filter(([key]) => !reservedFields[key]).reduce((a, [key, value]) => { a[key] = value; return a; }, {});
+
   return {
     cron,
     id,
@@ -85,7 +110,8 @@ const getBotInfo = (serviceName, stage, ymlFunctionName, leoEvents, leoEventInde
     source,
     destination,
     register: config && config.register,
-    suffix
+    suffix,
+    extraSettings
   }
 }
 
@@ -166,6 +192,140 @@ const mutateViaPath = (obj, section, value) => {
   }
 }
 
+/**
+ * Override Serverless environment variables with current process.env values
+ * 
+ * This prevents local invoke from failing for environment variables that can't be
+ * resolved via the serverless resolver.
+ * 
+ * @param {*} serverless 
+ * @param {Serverless.FunctionData} func 
+ */
+const removeExternallyProvidedServerlessEnvironmentVariables = (serverless, func) => {
+  let env = process.env;
+
+  // Override any provider level environment variables that already exists in process.env
+  Object.entries(serverless.service.provider.environment || {}).forEach(([key, value]) => {
+    if (env[key] != null) {
+      serverless.service.provider.environment[key] = env[key]
+    }
+  });
+
+  // Override any function level environment variables that already exists in process.env
+  Object.entries(func.environment || {}).forEach(([key, value]) => {
+    if (env[key] != null) {
+      func.environment[key] = value
+    }
+  });
+}
+
+/**
+ *  Create the BotInvocationEvent for the given function
+ * 
+ * @param {*} serverless 
+ * @param {function?:string, name?:string, botNumber?:number} options 
+ * @returns BotInvocationEvent
+ */
+const buildBotInvocationEvent = (serverless, options) => {
+  const { function: functionName, name, botNumber = 0 } = options;
+
+
+  // Find the serverless function that matches the options
+  const lambdaName = functionName || name
+  const regex = new RegExp(lambdaName)
+  const functions = Object.keys(serverless.service.functions)
+  const matchingFunctions = functions.filter(i => regex.test(i))
+  let functionKey
+  if (matchingFunctions.length > 1) {
+    functionKey = matchingFunctions.find(i => i === lambdaName)
+    if (!functionKey) {
+      throw new Error('Multiple matches found for bot name/lambda, please be more specific.')
+    }
+  } else if (matchingFunctions.length === 1) {
+    functionKey = matchingFunctions[0]
+  } else {
+    throw new Error('Could not match bot name/lambda in serverless defined functions.')
+  }
+  const serverlessJson = serverless.service.getFunction(functionKey);
+
+  // Find the leo event that matches functionKey and name
+  let event
+  let eventIndex = 0
+  if (serverlessJson.events.length === 1) {
+    event = serverlessJson.events[0].leo
+  } else {
+
+    // Find the leo event that exact matches `name`
+    let filteredEvents = serverlessJson.events.filter((event, index) => {
+      if (Object.values(event.leo).some(leoKey => name === leoKey)) {
+        eventIndex = index
+        return true
+      }
+    });
+
+    if (filteredEvents.length === 1) {
+      event = filteredEvents[0].leo
+    } else {
+
+      // Find the leo event that regex matches `name`
+      filteredEvents = serverlessJson.events.filter((event, index) => {
+        if (Object.values(event.leo).some(leoKey => new RegExp(name).test(leoKey))) {
+          eventIndex = index
+          return true
+        }
+      });
+
+      if (filteredEvents.length === 1) {
+        event = filteredEvents[0].leo
+      }
+    }
+  }
+
+  if (!event) {
+    throw new Error('Could not match the bot name with the bot configurations')
+  }
+
+  const botInfo = getBotInfo(
+    serverless.service.service,
+    serverless.service.provider.stage,
+    functionKey,
+    serverlessJson.events,
+    eventIndex,
+    event,
+    botNumber,
+    serverless.service.custom.leo || {}
+  );
+
+  // Create the BotInvocationEvent structure
+  event.botId = botInfo.id
+  event.__cron = {
+    id: botInfo.id,
+    iid: '0',
+    ts: Date.now(),
+    force: true
+  }
+  return event;
+}
+
+/**
+ * returns an array of functions that listen to any of the queues
+ * 
+ * @param {*} serverless 
+ * @param {string[]} queues 
+ * @returns { function:string; data: Serverless.FunctionData }
+ */
+const getBotsTriggeredFromQueues = (serverless, queues = []) => {
+  queues = new Set(queues)
+  return Object.entries(serverless.service.functions).filter(([_k, f]) => {
+    return (f.events || []).some(e => e.leo != null &&
+      (
+        (typeof e.leo === "string" && queues.has(e.leo)) ||
+        (queues.has(e.leo.source || e.leo.queue))
+      )
+    );
+  }).map(([key, value]) => ({ function: key, data: value }));
+}
+
 module.exports = {
   getBotInfo,
   getDirInfo,
@@ -173,5 +333,8 @@ module.exports = {
   replaceTextPairsInFilesInFolder,
   renameFilesInFolder,
   recursePathAndOperate,
-  ymlToJson
+  ymlToJson,
+  removeExternallyProvidedServerlessEnvironmentVariables,
+  buildBotInvocationEvent,
+  getBotsTriggeredFromQueues
 }

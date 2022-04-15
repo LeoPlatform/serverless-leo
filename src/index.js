@@ -85,7 +85,37 @@ class ServerlessLeo {
             usage: 'Specify the name of the bot',
             shortcut: 'n',
             type: 'string'
+          },
+          runner: {
+            usage: 'Way to invoke the bot.  node|serverless|sls  default: node',
+            shortcut: 'r',
+            type: 'string',
+            default: "node"
+          },
+          mockDir: {
+            usage: 'Directory of the mock data',
+            shortcut: 'md',
+            type: 'string'
+          },
+          mockFlag: {
+            usage: 'mock data using default dir .mock-data',
+            shortcut: 'm',
+            type: 'boolean'
+          },
+          workflow: {
+            usage: 'Invoke down stream bots',
+            shortcut: 'w',
+            type: 'boolean'
+          },
+          actualSource: {
+            usage: 'Source Bot will read from bus when mocking',
+            shortcut: 's',
+            type: 'boolean'
           }
+
+          // TODO flag to mock source only
+
+          // TODO way to link multiple projects for workflow
         }
       }
     };
@@ -157,83 +187,138 @@ class ServerlessLeo {
           .then(this.compileLeo)
       },
       'invoke-bot:leo-local': async () => {
-        const { function: functionName, name, botNumber = 0 } = this.serverless.pluginManager.cliOptions
-        const lambdaName = functionName || name
-        const regex = new RegExp(lambdaName)
-        const functions = Object.keys(this.serverless.service.functions)
-        const matchingFunctions = functions.filter(i => regex.test(i))
-        let functionKey
-        if (matchingFunctions.length > 1) {
-          functionKey = matchingFunctions.find(i => i === lambdaName)
-          if (!functionKey) {
-            throw new Error('Multiple matches found for bot name/lambda, please be more specific.')
-          }
-        } else if (matchingFunctions.length === 1) {
-          functionKey = matchingFunctions[0]
-        } else {
-          throw new Error('Could not match bot name/lambda in serverless defined functions.')
-        }
-        const pathSegments = this.serverless.service.functions[functionKey].handler.split(/\//)
-        pathSegments[pathSegments.length - 1] = 'serverless.yml'
-        const serverlessYml = fs.readFileSync(path.join(...pathSegments)).toString()
-        const serverlessJson = utils.ymlToJson(serverlessYml)
-        // Build the event to invoke the lambda with
-        let event
-        let eventIndex = 0
-        if (serverlessJson[functionKey].events.length === 1) {
-          event = serverlessJson[functionKey].events[0].leo
-        } else {
-          let filteredEvents = serverlessJson[functionKey].events.filter((event, index) => {
-            if (Object.values(event.leo).some(leoKey => name === leoKey)) {
-              eventIndex = index
-              return true
+
+        let opts = { ...this.serverless.pluginManager.cliOptions };
+        let webpackPlugin = this.serverless.pluginManager.plugins.find(s => s.constructor.name === "ServerlessWebpack");
+
+        // Setup the node runner
+        if (opts.runner === "node") {
+
+          // Try and find the tsconfig build directory
+          let tsConfigPath = path.resolve(process.cwd(), "tsconfig.json");
+          if (fs.existsSync(tsConfigPath)) {
+            let tsConfig = {};
+            try {
+              tsConfig = require(tsConfigPath);
+            } catch (err) {
+
+              // remove any trailing commas and try to parse it again
+              let tsConfigContent = fs.readFileSync(tsConfigPath).toString()
+                .replace(/[\n\r]+[ \t]*/g, "").replace(/,([}\]])/, "$1");
+
+              tsConfig = JSON.parse(tsConfigContent);
             }
-          })
-          if (filteredEvents.length === 1) {
-            event = filteredEvents[0].leo
-          } else {
-            filteredEvents = serverlessJson[functionKey].events.filter((event, index) => {
-              if (Object.values(event.leo).some(leoKey => new RegExp(name).test(leoKey))) {
-                eventIndex = index
-                return true
+
+            // Set serverless directory to the tsconfig output directory
+            let outDir = (tsConfig.compilerOptions || {}).outDir || outDir;
+            this.serverless.serviceDir = path.resolve(this.serverless.serviceDir, outDir);
+          }
+
+          // Remove any webpack local invoke hooks
+          // We are bypassing webpack and running the code directly via node
+          let beforeInvokeHook = (this.serverless.pluginManager.hooks["before:invoke:local:invoke"] || []);
+          this.serverless.pluginManager.hooks["before:invoke:local:invoke"] = beforeInvokeHook.filter(s => s.pluginName !== "ServerlessWebpack");
+          webpackPlugin = null;
+
+        } else {
+
+          // If they have already build the project disable webpack builds
+          if (webpackPlugin != null) {
+            // Build once and then disable webpack builds
+            execSync("serverless webpack");
+            this.serverless.service.custom.webpack = Object.assign(this.serverless.service.custom.webpack || {}, { noBuild: true });
+          }
+        }
+
+        // Support mock data streams
+        if (opts.mockDir || opts.mockFlag) {
+          process.env.RSTREAMS_MOCK_DATA = path.resolve(process.cwd(), options.mockDir || ".mock-data");
+        }
+
+        // Mark Source queue from the first bot as reading from the actual bus
+        // Only applies if mocking and actualSource is enabled
+        if ((opts.mockDir || opts.mockFlag) && opts.actualSource) {
+          let event = utils.buildBotInvocationEvent(this.serverless, this.serverless.pluginManager.cliOptions)
+          let queue = event.queue || event.source
+          if (queue != null) {
+            process.env[`RSTREAMS_MOCK_DATA_Q_${queue}`] = "passthrough";
+          }
+        }
+
+
+        let invokedBots = new Set();
+        let queuesThatGotData = new Set();
+        let botsToInvoke = [{ function: opts.function, name: opts.name, botNumber: opts.botNumber }];
+
+        let serviceDir = this.serverless.serviceDir;
+
+        for (let functionData of botsToInvoke) {
+          // Service directory may have been changed from a previous bot invoke, just reset it back
+          this.serverless.serviceDir = serviceDir;
+          let functionKey = functionData.function;
+          let event = utils.buildBotInvocationEvent(this.serverless, functionData)
+
+          this.serverless.cli.log(`\nInvoking local lambda ${functionKey} with data: ${JSON.stringify(event)}`)
+
+          // Setup the function to run
+
+          // Change global options for other plugins
+          this.options.function = functionKey;
+          this.options.data = JSON.stringify(event);
+
+          // Fix webpack references if used
+          if (webpackPlugin != null) {
+            webpackPlugin.options.function = functionKey;
+            if (opts.workflow) {
+              // Need to reset webpack config require because entries get set once
+              // for the first function and then cause an error for subsquent calls
+              // So it needs to re import the file for each function
+              let file = webpackPlugin.configuration && (webpackPlugin.configuration.config || webpackPlugin.configuration.webpackConfig);
+              if (typeof file === "string") {
+                let webpackConfigPath = path.join(this.serverless.config.servicePath, file)
+                delete require.cache[require.resolve(webpackConfigPath)]
               }
-            })
-            if (filteredEvents.length === 1) {
-              event = filteredEvents[0].leo
             }
           }
-        }
-        if (!event) {
-          throw new Error('Could not match the bot name with the bot configurations')
-        }
-        const botInfo = utils.getBotInfo(this.serverless.service.service, this.serverless.service.provider.stage, functionKey, serverlessJson[functionKey].events, eventIndex, event, botNumber)
-        event.botId = botInfo.id
-        event.__cron = {
-          id: botInfo.id,
-          iid: '0',
-          ts: Date.now(),
-          force: true
-        }
-        this.serverless.cli.log(`Invoking local lambda ${functionKey} with data: ${JSON.stringify(event)}`)
 
-        let func = this.serverless.service.getFunction(functionKey);
-        let env = {};
-        Object.entries(process.env).filter(i => !/ /.test(i[1])).map(([key, value]) => { env[key] = value });
-        Object.entries(this.serverless.service.provider.environment || {}).forEach(([key, value]) => {
-          if (env[key] != null) {
-            this.serverless.service.provider.environment[key] = env[key]
+          // Clean Env Vars
+          let func = this.serverless.service.getFunction(functionKey);
+          utils.removeExternallyProvidedServerlessEnvironmentVariables(this.serverless, func);
+
+          // Invoke the function
+          await this.serverless.pluginManager.spawn("invoke:local");
+
+          // Add down stream bots to invoke list
+          if (opts.workflow) {
+
+            invokedBots.add(functionKey)
+
+            // Get list of queues with new data
+            let queuesWithNewData = [];
+            Object.keys(process.env).forEach(k => {
+
+              // mock-wrapper will flag a queue that gets new data
+              // by adding an env var `RSTREAMS_MOCK_DATA_Q_${queue}`
+              let [, queue] = k.match(/^RSTREAMS_MOCK_DATA_Q_(.*)$/) || [];
+
+
+              if (queue != null && !queuesThatGotData.has(queue)) {
+                // If it is a queue that hasn't received data already
+                // add it to the list and mark it
+                queuesThatGotData.add(queue);
+                queuesWithNewData.push(queue);
+              }
+            });
+
+            // Get any bots that are triggered by the new queues
+            let bots = utils.getBotsTriggeredFromQueues(this.serverless, queuesWithNewData)
+              .map(f => ({ function: f.function }))
+              .filter(f => !invokedBots.has(f.function));
+
+            // Add the bots to the list to invoke
+            botsToInvoke.push(...bots);
           }
-        });
-        Object.entries(func.environment || {}).forEach(([key, value]) => {
-          if (env[key] != null) {
-            func.environment[key] = value
-          }
-        });
-
-        this.options.function = functionKey;
-        this.options.data = JSON.stringify(event);
-
-        await this.serverless.pluginManager.spawn("invoke:local");
+        }
       }
     }
   }

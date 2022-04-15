@@ -11,8 +11,8 @@ module.exports = {
     const stage = this.serverless.service.provider.stage
     const custom = this.serverless.service.custom[stage] ? this.serverless.service.custom[stage] : this.serverless.service.custom
 
-    const leoStack = custom.leoStack || this.serverless.service.custom.leoStack;
-    const leoRegister = custom.leoRegister || this.serverless.service.custom.leoRegister;
+    const leoStack = custom.leoStack || this.serverless.service.custom.leoStack
+    const leoRegister = custom.leoRegister || this.serverless.service.custom.leoRegister
 
     const cloudformation = this.serverless.service.provider.compiledCloudFormationTemplate
     const customInstall = {
@@ -69,15 +69,16 @@ module.exports = {
                 source,
                 destination,
                 register,
-                suffix
-              } = getBotInfo(this.serverless.service.service, stage, ymlFunctionName, leoEvents, eventIndex, config, botNumber)
+                suffix,
+                extraSettings
+              } = getBotInfo(this.serverless.service.service, stage, ymlFunctionName, leoEvents, eventIndex, config, botNumber, this.serverless.service.custom.leo)
 
               const installProperty = {
                 id,
                 name,
                 time: cron,
                 type: 'cron',
-                settings: {
+                settings: Object.assign(extraSettings, {
                   botNumber,
                   botCount: config.botCount,
                   codeOverrides: config && config.codeOverrides,
@@ -86,7 +87,7 @@ module.exports = {
                   source,
                   destination,
                   suffix
-                },
+                }),
                 lambdaName: {
                   Ref: logicalId
                 }
