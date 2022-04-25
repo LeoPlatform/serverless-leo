@@ -5,6 +5,6 @@ module.exports = {
     },
     "extends": "eslint:recommended",
     "rules": {
-        "space-before-function-paren": false
+        "space-before-function-paren": "off"
     }
 }
