@@ -1,9 +1,10 @@
 module.exports = {
     "env": {
         "node": true,
-        "mocha": true
+        "mocha": true,
+        "commonjs": true,
     },
-    "extends": "eslint:recommended",
+    "extends": ["eslint:recommended"],
     "rules": {
         "space-before-function-paren": "off"
     }

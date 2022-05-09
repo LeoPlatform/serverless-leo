@@ -9,6 +9,7 @@ const fs = require('fs')
 const validate = require('./lib/validate')
 const compileLeo = require('./lib/leo')
 const utils = require('./lib/utils')
+const { generateConfig, getConfigFullPath, populateEnvFromConfig } = require('./lib/generateConfig')
 
 // TODO: sls create - Place tempates in memorable cdn location like https://dsco.io/aws-nodejs-leo-microservice
 // TODO: sls create bot - Place all templates in memorable cdn location, and publish them, but also create the schortcuts like `sls create bot --name my-bot-name`
@@ -117,6 +118,32 @@ class ServerlessLeo {
 
           // TODO way to link multiple projects for workflow
         }
+      },
+      'generate-config': {
+        usage: 'Run a leo bot locally',
+        lifecycleEvents: [
+          'run'
+        ],
+        options: {
+          file: {
+            usage: 'Specify the name of the bot',
+            shortcut: 'f',
+            type: 'string'
+          }
+        }
+      },
+      'watch-config': {
+        usage: 'Run a leo bot locally',
+        lifecycleEvents: [
+          'run'
+        ],
+        options: {
+          file: {
+            usage: 'Specify the name of the bot',
+            shortcut: 'f',
+            type: 'string'
+          }
+        }
       }
     }
 
@@ -136,6 +163,7 @@ class ServerlessLeo {
       compileLeo
     )
 
+    let state = {}
     this.hooks = {
       'create:bot:copy-template': () => {
         let {
@@ -172,6 +200,20 @@ class ServerlessLeo {
         return Promise.resolve()
       },
       'before:package:cleanup': () => BbPromise.bind(this).then(this.gatherBots),
+      'before:webpack:compile:compile': () => {
+        return this.hooks['before:package:createDeploymentArtifacts']()
+      },
+      'before:package:createDeploymentArtifacts': () => {
+        let opts = { ...this.serverless.pluginManager.cliOptions }
+        let file = getConfigFullPath(this.serverless, opts.file)
+        if (state.generatedConfig || !fs.existsSync(file)) {
+          return BbPromise.resolve()
+        }
+        state.generatedConfig = true
+        return BbPromise.bind(this)
+          .then(() => generateConfig(file))
+          .then((d) => populateEnvFromConfig(this.serverless, file, d))
+      },
       'after:package:compileFunctions': () => {
         this.validated = this.validate()
         if (this.validated.errors.length > 0) {
@@ -310,6 +352,25 @@ class ServerlessLeo {
             botsToInvoke.push(...bots)
           }
         }
+      },
+
+      'watch-config:run': () => {
+        let opts = { ...this.serverless.pluginManager.cliOptions }
+        let file = getConfigFullPath(this.serverless, opts.file)
+
+        fs.watch(file, {
+        }, (eventType, filename) => {
+          try {
+            generateConfig(file)
+          } catch (err) {
+            this.serverless.cli.error(err)
+          }
+        })
+      },
+      'generate-config:run': () => {
+        let opts = { ...this.serverless.pluginManager.cliOptions }
+        let file = getConfigFullPath(this.serverless, opts.file)
+        generateConfig(file)
       }
     }
   }
