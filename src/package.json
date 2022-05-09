@@ -1,6 +1,6 @@
 {
   "name": "serverless-leo",
-  "version": "2.1.1",
+  "version": "3.0.0",
   "description": "Serverless plugin for leo microservices",
   "main": "index.js",
   "directories": {
@@ -37,7 +37,7 @@
   },
   "devDependencies": {
     "chai": "^4.2.0",
-    "eslint": "^5.16.0",
+    "eslint": "^8.13.0",
     "eslint-config-standard": "^12.0.0",
     "eslint-plugin-import": "^2.17.2",
     "eslint-plugin-node": "^8.0.1",
