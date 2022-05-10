@@ -14,7 +14,7 @@ const reservedFields = {
   source: true,
   destination: true,
   suffix: true
-};
+}
 
 const replaceTextPairsInFile = (filePath, replacementPairs) => {
   let fileContent = fs.readFileSync(filePath).toString()
@@ -47,7 +47,7 @@ const recursePathAndOperate = (folderPath, fileOperation) => {
   results.forEach((result) => {
     if (result.isFile) {
       fileOperation(result.path)
-    } else if (result.isDir) {
+    } else if (result.isDir && !result.file.match(/^node[_-]modules$/)) {
       recursePathAndOperate(result.path, fileOperation)
     }
   })
@@ -96,11 +96,11 @@ const getBotInfo = (serviceName, stage, ymlFunctionName, leoEvents, leoEventInde
 
   // If botIdExcludeStage is enabled, remove the stage from the id
   if (pluginConfig.botIdExcludeStage) {
-    id = id.replace(`${serviceName}-${stage}-`, `${serviceName}-`);
+    id = id.replace(`${serviceName}-${stage}-`, `${serviceName}-`)
   }
 
   // Extract any extra fileds from the leo event
-  let extraSettings = Object.entries(config).filter(([key]) => !reservedFields[key]).reduce((a, [key, value]) => { a[key] = value; return a; }, {});
+  let extraSettings = Object.entries(config).filter(([key]) => !reservedFields[key]).reduce((a, [key, value]) => { a[key] = value; return a }, {})
 
   return {
     cron,
@@ -194,41 +194,40 @@ const mutateViaPath = (obj, section, value) => {
 
 /**
  * Override Serverless environment variables with current process.env values
- * 
+ *
  * This prevents local invoke from failing for environment variables that can't be
  * resolved via the serverless resolver.
- * 
- * @param {*} serverless 
- * @param {Serverless.FunctionData} func 
+ *
+ * @param {*} serverless
+ * @param {Serverless.FunctionData} func
  */
 const removeExternallyProvidedServerlessEnvironmentVariables = (serverless, func) => {
-  let env = process.env;
+  let env = process.env
 
   // Override any provider level environment variables that already exists in process.env
   Object.entries(serverless.service.provider.environment || {}).forEach(([key, value]) => {
     if (env[key] != null) {
       serverless.service.provider.environment[key] = env[key]
     }
-  });
+  })
 
   // Override any function level environment variables that already exists in process.env
   Object.entries(func.environment || {}).forEach(([key, value]) => {
     if (env[key] != null) {
       func.environment[key] = value
     }
-  });
+  })
 }
 
 /**
  *  Create the BotInvocationEvent for the given function
- * 
- * @param {*} serverless 
- * @param {function?:string, name?:string, botNumber?:number} options 
+ *
+ * @param {*} serverless
+ * @param {function?:string, name?:string, botNumber?:number} options
  * @returns BotInvocationEvent
  */
 const buildBotInvocationEvent = (serverless, options) => {
-  const { function: functionName, name, botNumber = 0 } = options;
-
+  const { function: functionName, name, botNumber = 0 } = options
 
   // Find the serverless function that matches the options
   const lambdaName = functionName || name
@@ -246,7 +245,7 @@ const buildBotInvocationEvent = (serverless, options) => {
   } else {
     throw new Error('Could not match bot name/lambda in serverless defined functions.')
   }
-  const serverlessJson = serverless.service.getFunction(functionKey);
+  const serverlessJson = serverless.service.getFunction(functionKey)
 
   // Find the leo event that matches functionKey and name
   let event
@@ -254,26 +253,24 @@ const buildBotInvocationEvent = (serverless, options) => {
   if (serverlessJson.events.length === 1) {
     event = serverlessJson.events[0].leo
   } else {
-
     // Find the leo event that exact matches `name`
     let filteredEvents = serverlessJson.events.filter((event, index) => {
       if (Object.values(event.leo).some(leoKey => name === leoKey)) {
         eventIndex = index
         return true
       }
-    });
+    })
 
     if (filteredEvents.length === 1) {
       event = filteredEvents[0].leo
     } else {
-
       // Find the leo event that regex matches `name`
       filteredEvents = serverlessJson.events.filter((event, index) => {
         if (Object.values(event.leo).some(leoKey => new RegExp(name).test(leoKey))) {
           eventIndex = index
           return true
         }
-      });
+      })
 
       if (filteredEvents.length === 1) {
         event = filteredEvents[0].leo
@@ -294,7 +291,7 @@ const buildBotInvocationEvent = (serverless, options) => {
     event,
     botNumber,
     serverless.service.custom.leo || {}
-  );
+  )
 
   // Create the BotInvocationEvent structure
   event.botId = botInfo.id
@@ -304,14 +301,14 @@ const buildBotInvocationEvent = (serverless, options) => {
     ts: Date.now(),
     force: true
   }
-  return event;
+  return event
 }
 
 /**
  * returns an array of functions that listen to any of the queues
- * 
- * @param {*} serverless 
- * @param {string[]} queues 
+ *
+ * @param {*} serverless
+ * @param {string[]} queues
  * @returns { function:string; data: Serverless.FunctionData }
  */
 const getBotsTriggeredFromQueues = (serverless, queues = []) => {
@@ -319,11 +316,11 @@ const getBotsTriggeredFromQueues = (serverless, queues = []) => {
   return Object.entries(serverless.service.functions).filter(([_k, f]) => {
     return (f.events || []).some(e => e.leo != null &&
       (
-        (typeof e.leo === "string" && queues.has(e.leo)) ||
+        (typeof e.leo === 'string' && queues.has(e.leo)) ||
         (queues.has(e.leo.source || e.leo.queue))
       )
-    );
-  }).map(([key, value]) => ({ function: key, data: value }));
+    )
+  }).map(([key, value]) => ({ function: key, data: value }))
 }
 
 module.exports = {

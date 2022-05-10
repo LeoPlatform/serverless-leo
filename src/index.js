@@ -144,6 +144,14 @@ class ServerlessLeo {
             type: 'string'
           }
         }
+      },
+      'init-template': {
+        usage: 'Initializes the project template with your custom values',
+        lifecycleEvents: [
+          'run'
+        ],
+        options: {
+        }
       }
     }
 
@@ -165,6 +173,27 @@ class ServerlessLeo {
 
     let state = {}
     this.hooks = {
+      'init-template:run': () => {
+        const opts = this.serverless.pluginManager.cliOptions
+
+        let dir = this.serverless.serviceDir
+        opts['project-name'] = path.basename(dir)
+        let prompt = require('prompt-sync')({ sigint: true })
+        let slsConfig = this.serverless.service
+        let tokens = slsConfig.custom.leo.rsfTemplateTokens || {}
+
+        const replacements = Object.entries(tokens).map(([key, token]) => {
+          let value = opts[key]
+          if (value == null) {
+            value = prompt(`${key}: `)
+            opts[key] = value
+          }
+          return [token, value]
+        })
+
+        utils.replaceTextPairsInFilesInFolder(dir, replacements)
+        return Promise.resolve()
+      },
       'create:bot:copy-template': () => {
         let {
           language,
