@@ -204,6 +204,16 @@ const mutateViaPath = (obj, section, value) => {
 const removeExternallyProvidedServerlessEnvironmentVariables = (serverless, func) => {
   let env = process.env
 
+  serverless.service.provider.environment = serverless.service.provider.environment || {};
+
+  // invoke-local doesn't account for pre set AWS vars
+  // So explicity set them to override the defaults
+  ['AWS_REGION', 'AWS_DEFAULT_REGION'].forEach(key => {
+    if (process.env[key] != null) {
+      serverless.service.provider.environment[key] = process.env[key]
+    }
+  })
+
   // Override any provider level environment variables that already exists in process.env
   Object.entries(serverless.service.provider.environment || {}).forEach(([key, value]) => {
     if (env[key] != null) {

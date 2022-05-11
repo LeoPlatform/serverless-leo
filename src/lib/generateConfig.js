@@ -282,43 +282,6 @@ function getConfigFullPath(serverless, file) {
   return file
 }
 
-// function getConfigReferences2(config, i = 0) {
-//   let lookups = {}
-//   let env = {}
-//   let response = {
-//     lookups, env, index: i
-//   }
-//   Object.entries(config).forEach(([key, value]) => {
-//     if (value != null && typeof value === 'object' &&
-//       value.service != null && value.key != null && value.type != null) {
-//       let index = ++response.index
-//       // todo: fix key for secrets
-//       env[`RS_${value.service}:${value.key}`] = 'RS' + index
-//       let v
-//       switch (value.service) {
-//         case 'cf': v = {
-//           'Fn::ImportValue': {
-//             'Fn::Sub': value.key
-//           }
-//         }; break
-//         case 'ssm': v = `{{ssm:${value.key}}}`; break
-//         case 'secret': v = 'true'; break
-//         case 'stack': v = {
-//           'Ref': value.key
-//         }; break
-//       }
-//       lookups['RS' + index] = v
-//     } else if (value != null && typeof value === 'object') {
-//       let r = getConfigReferences(value, response.index)
-//       Object.assign(lookups, r.lookups)
-//       Object.assign(env, r.env)
-//       response.index = r.index
-//     }
-//   })
-
-//   return response
-// }
-
 function getConfigReferences(config, useSecretsManager, lookups = [], permissions = new Set()) {
   let output = {}
   Object.entries(config).forEach(([key, value]) => {
@@ -373,54 +336,6 @@ function getConfigEnv(serverless, file, config) {
   const custom = serverless.service.custom[stage] ? serverless.service.custom[stage] : serverless.service.custom
   const leoStack = custom.leoStack || serverless.service.custom.leoStack
   const useSecretsManager = serverless.service.custom.leo.rsfConfigResolutionType === 'secretsmanager' || serverless.service.custom.leo.rsfConfigResolutionType == null
-  // let lookups1 = {
-  //   'RS1': {
-  //     'Fn::ImportValue': {
-  //       'Fn::Sub': 'ProdAuth-LeoAuth'
-  //     }
-  //   },
-  //   'RS2': {
-  //     'Ref': 'BotRole'
-  //   },
-  //   'RS3': 'us-east-1:220162591379',
-  //   'RS4': 'us-east-1:220162591379'
-
-  //   // 'RS3': '{{resolve:secretsmanager:arn:aws:secretsmanager:us-east-1:220162591379:secret:test_redshift_dw_read_only-VhLIcT:SecretString}}',
-  //   // 'RS4': '{{resolve:secretsmanager:arn:aws:secretsmanager:us-east-1:220162591379:secret:staging_redshift_dw_read_only-OapYum:SecretString}}'
-  //   // 'RS3': '{{resolve:secretsmanager:${MyStage1}_redshift_dw_read_only:SecretString}}',
-  //   // 'RS4': '{{resolve:secretsmanager:${MyStage2}_redshift_dw_read_only:SecretString}}'
-  // }
-
-  // let env1 = {
-  //   STAGE: '${Stage}', // Serverless Stage
-  //   MY_STAGE_1: '${MyStage1}', // Pulled from
-  //   MY_STAGE_2: '${MyStage2}',
-  //   'RS_cf::item-${MyStage1}-elasticendpoint': '${RS1}',
-  //   'RS_stack::some-stack-variable-of-my-own': '${RS2}',
-  //   // "RS_secret::test_redshift_dw_read_only.password" = "password_12345";
-  //   // "RS_secret::test_redshift_dw_read_only" = JSON.stringify({ username: "my_username", password: "password_1234", port: 54390 });
-
-  //   'RS_secret::${MyStage1}_redshift_dw_read_only': '${RS3}',
-  //   // JSON.stringify({
-  //   //   'username': 'dw_read_user',
-  //   //   'password': '1234',
-  //   //   'engine': 'redshift',
-  //   //   'host': 'testdw-redshift-t31bfkdfcz5x.cozies5zhqyd.us-east-1.redshift.amazonaws.com',
-  //   //   'port': 5439,
-  //   //   'dbClusterIdentifier': 'testdw-redshift-t31bfkdfcz5x'
-  //   // }),
-  //   // "RS_secret::${stage}_redshift_dw_read_only": "true"
-
-  //   'RS_secret::${MyStage2}_redshift_dw_read_only': '${RS4}'
-  //   // JSON.stringify({
-  //   //   'username': 'dw_read_user-dev',
-  //   //   'password': '9876-dev',
-  //   //   'engine': 'redshift-dev',
-  //   //   'host': 'testdw-redshift-t31bfkdfcz5x.cozies5zhqyd.us-east-1.redshift.amazonaws.com-dev',
-  //   //   'port': 1234,
-  //   //   'dbClusterIdentifier': 'testdw-redshift-t31bfkdfcz5x-dev'
-  //   // })
-  // }
 
   let { output, lookups, permissions } = getConfigReferences(config, useSecretsManager)
 
@@ -457,26 +372,6 @@ function getConfigEnv(serverless, file, config) {
       }
     }
   })
-  // let params = {
-  //   stage: {
-  //     Type: 'String',
-  //     MinLength: 1,
-  //     Description: 'Stage',
-  //     Value: serverless.service.provider.stage
-  //   },
-  //   MyStage1: {
-  //     Type: 'String',
-  //     MinLength: 1,
-  //     Description: 'Custom Stage',
-  //     Value: serverless.pluginManager.cliOptions.MyStage1
-  //   },
-  //   MyStage2: {
-  //     Type: 'String',
-  //     MinLength: 1,
-  //     Description: 'Custom Stage',
-  //     Value: serverless.pluginManager.cliOptions.MyStage2
-  //   }
-  // }
 
   // Add permissions to lambda roles to read secrets
   const allFunctions = serverless.service.getAllFunctions()
