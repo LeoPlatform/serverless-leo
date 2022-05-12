@@ -17,11 +17,16 @@ const reservedFields = {
 }
 
 const replaceTextPairsInFile = (filePath, replacementPairs) => {
+  let path = filePath;
   let fileContent = fs.readFileSync(filePath).toString()
   replacementPairs.forEach((replacementPair) => {
     fileContent = fileContent.replace(new RegExp(replacementPair[0], 'g'), replacementPair[1])
+    filePath = filePath.replace(new RegExp(replacementPair[0], 'g'), replacementPair[1])
   })
-  fs.writeFileSync(filePath, fileContent)
+  fs.writeFileSync(path, fileContent)
+  if (path != filePath) {
+    fs.renameSync(path, filePath)
+  }
 }
 
 const getDirInfo = (folderPath) => {
