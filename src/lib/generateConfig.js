@@ -416,35 +416,56 @@ function getConfigEnv(serverless, file, config) {
     }
   })
 
-  let map = {
-    RSFReplicaMap: {
-      'us-east-2': ['us-east-1'],
-      'us-east-1': ['us-west-2'],
-      'us-west-1': ['us-east-1'],
-      'us-west-2': ['us-east-1'],
-      'af-south-1': ['us-east-1'],
-      'ap-east-1': ['ap-south-1'],
-      'ap-south-1': ['ap-east-1'],
-      'ap-northeast-3': ['ap-east-1'],
-      'ap-northeast-2': ['ap-east-1'],
-      'ap-southeast-1': ['ap-east-1'],
-      'ap-southeast-2': ['ap-east-1'],
-      'ap-northeast-1': ['ap-east-1'],
-      'ca-central-1': ['us-east-1'],
-      'eu-central-1': ['eu-west-1'],
-      'eu-west-1': ['eu-central-1'],
-      'eu-west-2': ['eu-central-1'],
-      'eu-south-1': ['eu-central-1'],
-      'eu-west-3': ['eu-central-1'],
-      'eu-north-1': ['eu-central-1'],
-      'me-south-1': ['us-east-1'],
-      'sa-east-1': ['us-east-1']
-    }
-  }
-  let replicaRegions = ['us-east-1']
+
   let rsfConfigName = {
     'Fn::Sub': 'rsf-config-${AWS::StackName}-${AWS::Region}'
   }
+
+  if (useSecretsManager) {
+    // Build default replica regions
+    let map = {
+      RSFReplicaMap: Object.entries({
+        'us-east-2': ['us-east-1'],
+        'us-east-1': ['us-west-2'],
+        'us-west-1': ['us-east-1'],
+        'us-west-2': ['us-east-1'],
+        'af-south-1': ['us-east-1'],
+        'ap-east-1': ['ap-south-1'],
+        'ap-south-1': ['ap-east-1'],
+        'ap-northeast-3': ['ap-east-1'],
+        'ap-northeast-2': ['ap-east-1'],
+        'ap-southeast-1': ['ap-east-1'],
+        'ap-southeast-2': ['ap-east-1'],
+        'ap-northeast-1': ['ap-east-1'],
+        'ca-central-1': ['us-east-1'],
+        'eu-central-1': ['eu-west-1'],
+        'eu-west-1': ['eu-central-1'],
+        'eu-west-2': ['eu-central-1'],
+        'eu-south-1': ['eu-central-1'],
+        'eu-west-3': ['eu-central-1'],
+        'eu-north-1': ['eu-central-1'],
+        'me-south-1': ['us-east-1'],
+        'sa-east-1': ['us-east-1']
+      }).reduce((a, [key, values]) => {
+        if (serverless.service.custom.leo.rsfConfigReplicationRegions &&
+          serverless.service.custom.leo.rsfConfigReplicationRegions[key]) {
+          values = serverless.service.custom.leo.rsfConfigReplicationRegions[key];
+          if (!Array.isArray(values)) {
+            values = [values];
+          }
+        }
+        a[key] = {
+          values: values.map(region => ({
+            Region: region
+          }))
+        };
+        return a;
+      }, {})
+    }
+    serverless.service.resources.Mappings = Object.assign(map, serverless.service.resources.Mappings)
+  }
+
+
   return {
     env: Object.assign({
       RSF_CONFIG: useSecretsManager ? rsfConfigName : {
@@ -539,9 +560,7 @@ function getConfigEnv(serverless, file, config) {
               JSON.stringify(output, null, 2), lookups
             ]
           },
-          ReplicaRegions: replicaRegions.map(region => ({
-            Region: region
-          })),
+          ReplicaRegions: { "Fn::FindInMap": ["RSFReplicaMap", { "Ref": "AWS::Region" }, "values"] },
           Tags: [{
             Key: 'service',
             Value: serverless.service.service
