@@ -404,7 +404,24 @@ class ServerlessLeo {
         let opts = { ...this.serverless.pluginManager.cliOptions }
         let file = getConfigFullPath(this.serverless, opts.file)
         generateConfig(file)
-      }
+      },
+      'before:aws:deploy:deploy:createStack': async () => {
+        // Create doesn't use stack parameters so we need to remove them 
+        // so the action doesn't fail
+        let params = this.serverless.service.provider.coreCloudFormationTemplate.Parameters || {}
+        let stackParams = this.serverless.service.provider.stackParameters || []
+        this.serverless.service.provider.stackParameters = stackParams.filter(a => a.ParameterKey in params)
+        this.origStackParams = stackParams;
+      },
+
+      'before:aws:deploy:deploy:updateStack': async () => {
+        // Create doesn't use stack parameters so we had to remove them 
+        // add them back so the action doesn't fail
+        if (this.origStackParams != null) {
+          this.serverless.service.provider.stackParameters = this.origStackParams
+        }
+
+      },
     }
   }
 }
