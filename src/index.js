@@ -182,13 +182,17 @@ class ServerlessLeo {
         let slsConfig = this.serverless.service
         let tokens = slsConfig.custom.leo.rsfTemplateTokens || {}
 
-        const replacements = Object.entries(tokens).map(([key, token]) => {
+        const replacements = [];
+        Object.entries(tokens).map(([key, token]) => {
           let value = opts[key]
           if (value == null) {
             value = prompt(`${key}: `)
             opts[key] = value
           }
-          return [token, value]
+          replacements.push([token, value])
+          if (key === "rstreams-bus" && token.match(/-Bus-/)) {
+            replacements.push([token.replace(/-Bus-.*$/, "-Bus"), value.replace(/-Bus-.*$/, "-Bus")])
+          }
         })
 
         utils.replaceTextPairsInFilesInFolder(dir, replacements)
