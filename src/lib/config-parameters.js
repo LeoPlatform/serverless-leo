@@ -26,7 +26,6 @@ const regions = [
 ];
 
 const regionRegex = new RegExp(`(${regions.join("|")})`, "g");
-// const stageRegex = /(dev|test|staging|stage|production|prod)/ig;
 
 function tokenize(service, value, extra, stageRegex) {
 	let tokens = {
@@ -35,8 +34,7 @@ function tokenize(service, value, extra, stageRegex) {
 	};
 	let { Description: desc, Tags: tags } = extra || {};
 	let rsfTokenTag = (tags || []).find(t => t.Key === "rsf:token");
-	let tokenizedValue;
-	//let type;
+	let tokenizedValue
 	if (rsfTokenTag) {
 		tokenizedValue = rsfTokenTag.Value.replace(/__(.*?)__/g, (all, capture) => {
 			return `\${${capture}}`;
@@ -45,10 +43,6 @@ function tokenize(service, value, extra, stageRegex) {
 		let tokenMatches = desc && desc.match(/rsf-token:(.*?):rsf-token/);
 		if (tokenMatches) {
 			tokenizedValue = tokenMatches[1];
-			// let typeMatches = desc.match(/rsf-type:(.*?)[ $]/g);
-			// if (typeMatches) {
-			// 	type = typeMatches[1];
-			// }
 		} else {
 			tokenizedValue = value.replace(stageRegex, (str, args) => {
 				const stage = str[0] === str[0].toUpperCase() ? "Stage" : "stage";
@@ -63,9 +57,6 @@ function tokenize(service, value, extra, stageRegex) {
 	if (!tokenizedValue.startsWith(service + "::")) {
 		tokenizedValue = `${service}::${tokenizedValue}`
 	}
-	// if (type != null && !tokenizedValue.contains(":" + type)) {
-	// 	tokenizedValue = `${tokenizedValue}::${type}`
-	// }
 
 	let [_service, tokenizedKey, type, opts] = tokenizedValue.split("::")
 	let options = (opts || "").split(';').reduce((all, one) => {
@@ -109,25 +100,6 @@ function tokenize(service, value, extra, stageRegex) {
 function mergeTokens(all, token) {
 	let key = token.tokenizedValue;
 	if (!(key in all)) {
-		// let [_service, tokenizedKey, _type, opts] = token.tokenizedValue.split("::")
-		// let options = (opts || "").split(';').reduce((all, one) => {
-		// 	let [key, value] = one.split('=');
-		// 	if (key !== '') {
-		// 		all[key] = value == null ? true : value;
-		// 	}
-		// 	return all;
-		// }, {});
-
-		// let name = options.name;
-		// if (name == null) {
-		// 	name = tokenizedKey
-		// 		.replace(new RegExp(`^${token.service}::`), "")
-		// 		.replace(/(\${.*?})/g, "")
-		// 		.replace(/[-_ //\\\\.]+/g, "_")
-		// 		.replace(/(^_|_$)/g, "")
-		// 	name = name[0].toLowerCase() + name.slice(1)
-		// 	//name = snakeCase(token.tokenizedValue);
-		// }
 		all[key] = {
 			service: token.service,
 			tokenizedValue: token.tokenizedValue,
