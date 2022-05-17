@@ -2,6 +2,10 @@
 /* eslint-disable no-template-curly-in-string */
 const fs = require('fs')
 const path = require('path')
+const { fetchAll } = require("./utils");
+
+const resolveCfImportValue = require("serverless/lib/plugins/aws/utils/resolveCfImportValue");
+const resolveCfRefValue = require('serverless/lib/plugins/aws/utils/resolveCfRefValue');
 
 let ts
 try {
@@ -333,6 +337,184 @@ function getConfigReferences(config, useSecretsManager, lookups = [], permission
   }
 }
 
+async function resolveConfigForLocal(serverless, cache = {}) {
+  let fullStage = `${serverless.providers.aws.options.region}-${serverless.service.provider.environment.RSF_INVOKE_STAGE}`;
+  let configFromCache = false;
+  let configFileCache = path.resolve(serverless.config.serviceDir, `.rsf/config-${fullStage}.json`);
+  if (fs.existsSync(configFileCache)) {
+    let stat = fs.statSync(configFileCache);
+    let duration = Math.floor((Date.now() - stat.mtimeMs) / 1000);
+
+    // Default cache duration is 30 min
+    let validCacheDuration = (+process.env.RSF_CACHE_SECONDS) || 1800;
+    if (duration < validCacheDuration) {
+      try {
+        serverless.service.provider.environment.RSF_CONFIG = JSON.stringify(module.require(configFileCache));
+        configFromCache = true;
+      } catch (e) {
+        // Error getting cache
+      }
+    }
+  }
+
+  cache = {
+    stack: {},
+    cf: {},
+    sm: {},
+    ssm: {},
+    ...cache
+  };
+
+  // Resolve config env var
+  let rsfConfigEnvTemplate = serverless.service.provider.environment && serverless.service.provider.environment.RSF_CONFIG;
+  if (!configFromCache && rsfConfigEnvTemplate) {
+    let v = await resolveFnSub(rsfConfigEnvTemplate, serverless, cache);
+    serverless.service.provider.environment.RSF_CONFIG = v;
+  }
+
+  let busConfigFromCache = false;
+  let busConfigFileCache = path.resolve(serverless.config.serviceDir, `.rsf/bus-config-${fullStage}.json`);
+  if (fs.existsSync(busConfigFileCache)) {
+    let stat = fs.statSync(busConfigFileCache);
+    let duration = Math.floor((Date.now() - stat.mtimeMs) / 1000);
+
+    // Default cache duration is 30 min
+    let validCacheDuration = (+process.env.RSF_CACHE_SECONDS) || 1800;
+    if (duration < validCacheDuration) {
+      try {
+        serverless.service.provider.environment.RSTREAMS_CONFIG = JSON.stringify(module.require(busConfigFileCache));
+        busConfigFromCache = true;
+      } catch (e) {
+        // Error getting cache
+      }
+    }
+  }
+
+  // Resolve bus env config if it exists
+  let rstreamsConfigEnvTemplate = serverless.service.provider.environment && serverless.service.provider.environment.RSTREAMS_CONFIG;
+  if (!busConfigFromCache && rstreamsConfigEnvTemplate) {
+    let v = await resolveFnSub(rstreamsConfigEnvTemplate, serverless, cache);
+    serverless.service.provider.environment.RSTREAMS_CONFIG = v;
+    fs.writeFileSync(busConfigFileCache, JSON.stringify(JSON.parse(v), null, 2));
+  }
+
+  // Resolve bus env secret if it exists
+  let rstreamsConfigEnvSecretTemplate = serverless.service.provider.environment && serverless.service.provider.environment.RSTREAMS_CONFIG_SECRET;
+  if (rstreamsConfigEnvSecretTemplate) {
+    let v = await resolveFnSub(rstreamsConfigEnvSecretTemplate, serverless, cache);
+    serverless.service.provider.environment.RSTREAMS_CONFIG_SECRET = v;
+  }
+
+}
+
+const resolveServices = {
+  secretsmanager: async (provider, key, cache) => {
+    let parts = key.split(":");
+    let id = parts.shift();
+    let last = parts.pop();
+    let value;
+    if (id in cache.sm) {
+      value = cache.sm[id];
+    } else {
+      value = await provider.request("SecretsManager", "getSecretValue", { SecretId: id });
+      cache.sm[id] = value;
+    }
+
+    return parts.reduce((o, k) => {
+      let v = o[k] || {};
+      if (typeof v === "string") {
+        v = JSON.parse(v);
+      }
+      return v;
+    }, value)[last];
+  },
+  ssm: async (provider, key, cache) => {
+    if (key in cache.ssm) {
+      return cache.ssm[key]
+    } else {
+      let value = await provider.request("SSM", "getParameter", { Name: key });
+      cache.ssm[key] = value.Parameter.Value;
+      return value.Parameter.Value;
+    }
+  },
+  cf: async (provider, key, cache) => {
+    if (Object.keys(cache.cf).length === 0) {
+      let allCfExports = await fetchAll(t => provider.request("CloudFormation", "listExports", { NextToken: t }));
+      allCfExports.Exports.forEach(v => {
+        cache.cf[v.Name] = v.Value;
+      });
+    }
+    return cache.cf[key];
+  },
+  stack: async (provider, key, cache) => {
+    if (!(key in cache.stack)) {
+      cache.stack[key] = await resolveCfRefValue(provider, key);
+    }
+    return cache.stack[key];
+  }
+};
+
+async function resolveFnSub(fnSub, serverless, cache) {
+  let lookups = {
+    ...(serverless.service.provider.stackParameters || []).reduce((all, one) => {
+      let paramDef = (serverless.service.resources.Parameters || {})[one.ParameterKey];
+      if (paramDef && paramDef.Type.match(/AWS::SSM::Parameter/)) {
+        all[one.ParameterKey] = `{{resolve:ssm:${one.ParameterValue}}}`
+      } else {
+        all[one.ParameterKey] = one.ParameterValue;
+      }
+      return all;
+    }, {}),
+    ...serverless.service.resources.Resources,
+  };
+  if (fnSub != null && typeof fnSub === "object" && fnSub["Fn::Sub"]) {
+    fnSub = fnSub["Fn::Sub"];
+  }
+
+  let template = fnSub;
+  if (Array.isArray(fnSub)) {
+    let [t, l] = fnSub;
+    template = t;
+    lookups = l;
+  }
+  Object.entries({
+    "AWS::Region": serverless.providers.aws.options.region,
+    "AWS::StackName": serverless.providers.aws.naming.getStackName()
+  }).forEach(([key, value]) => {
+    lookups[key] = value;
+  });
+  let entries = Object.entries(lookups);
+  for (let i = 0; i < entries.length; i++) {
+    let [key, value] = entries[i];
+    if (value != null && typeof value === "object" && value["Fn::Sub"]) {
+      value = await resolveFnSub(value["Fn::Sub"], serverless, cache);
+    }
+    if (value != null && typeof value === "object") {
+      if (value.Ref) {
+        let preValue = value.Ref;
+        value = await resolveServices.stack(serverless.providers.aws, preValue, cache);
+      } else if (value["Fn::ImportValue"]) {
+        let preValue = await resolveFnSub(value["Fn::ImportValue"], serverless, cache);
+        value = await resolveServices.cf(serverless.providers.aws, preValue, cache);
+      }
+    } else if (typeof value === "string") {
+      let [, service, key] = (value.match(/{{resolve:(secretsmanager|ssm):(.*)}}$/) || []);
+      if (service && resolveServices[service]) {
+        value = await resolveServices[service](serverless.providers.aws, key, cache);
+      }
+    }
+    lookups[key] = value;
+  }
+
+  return template.replace(/\${(.*?)}/g, (_, key) => {
+    let v = lookups[key];
+    if (typeof v !== "string") {
+      v = JSON.stringify(v);
+    }
+    return v;
+  });
+}
+
 function getConfigEnv(serverless, file, config) {
   const stage = serverless.service.provider.stage
   const custom = serverless.service.custom[stage] ? serverless.service.custom[stage] : serverless.service.custom
@@ -608,5 +790,6 @@ module.exports = {
   generateConfig,
   getConfigFullPath,
   getConfigEnv,
-  populateEnvFromConfig
+  populateEnvFromConfig,
+  resolveConfigForLocal
 }

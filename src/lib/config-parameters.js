@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-
+const { fetchAll } = require("./utils");
 const regions = [
 	'us-east-2',
 	'us-east-1',
@@ -160,23 +160,6 @@ function mergeTokens(all, token) {
 
 let aws = require("aws-sdk");
 let prompt = require('prompt-sync')({ sigint: true })
-
-async function fetchAll(fn) {
-	let response = {};
-	do {
-		let r = await fn(response && response.NextToken);
-
-		delete response.NextToken;
-		Object.entries(r).forEach(([key, value]) => {
-			if (Array.isArray(value)) {
-				response[key] = (response[key] || []).concat(value);
-			} else {
-				response[key] = value
-			}
-		})
-	} while (response.NextToken)
-	return response;
-}
 
 async function editConfig(serverless, configPath, region) {
 

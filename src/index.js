@@ -9,7 +9,7 @@ const fs = require('fs')
 const validate = require('./lib/validate')
 const compileLeo = require('./lib/leo')
 const utils = require('./lib/utils')
-const { generateConfig, getConfigFullPath, populateEnvFromConfig } = require('./lib/generateConfig')
+const { generateConfig, getConfigFullPath, populateEnvFromConfig, resolveConfigForLocal } = require('./lib/generateConfig')
 const { editConfig } = require("./lib/config-parameters")
 
 // TODO: sls create - Place tempates in memorable cdn location like https://dsco.io/aws-nodejs-leo-microservice
@@ -278,6 +278,7 @@ class ServerlessLeo {
       },
       'invoke-bot:leo-local': async () => {
         let opts = { ...this.serverless.pluginManager.cliOptions }
+        await this.hooks["before:package:createDeploymentArtifacts"]();
         let webpackPlugin = this.serverless.pluginManager.plugins.find(s => s.constructor.name === 'ServerlessWebpack')
 
         // Setup the node runner
@@ -335,6 +336,10 @@ class ServerlessLeo {
         let botsToInvoke = [{ function: opts.function, name: opts.name, botNumber: opts.botNumber }]
 
         let serviceDir = this.serverless.serviceDir
+
+        serverless.service.provider.environment = serverless.service.provider.environment || {};
+        serverless.service.provider.environment.RSF_INVOKE_STAGE = serverless.service.provider.stage;
+        await resolveConfigForLocal(this.serverless, {})
 
         for (let functionData of botsToInvoke) {
           // Service directory may have been changed from a previous bot invoke, just reset it back

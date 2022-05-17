@@ -338,6 +338,25 @@ const getBotsTriggeredFromQueues = (serverless, queues = []) => {
   }).map(([key, value]) => ({ function: key, data: value }))
 }
 
+async function fetchAll(fn) {
+  let response = {};
+  do {
+    let r = await fn(response && response.NextToken);
+
+    delete response.NextToken;
+    Object.entries(r).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        response[key] = (response[key] || []).concat(value);
+      } else {
+        response[key] = value
+      }
+    })
+  } while (response.NextToken)
+  return response;
+}
+
+
+
 module.exports = {
   getBotInfo,
   getDirInfo,
@@ -348,5 +367,6 @@ module.exports = {
   ymlToJson,
   removeExternallyProvidedServerlessEnvironmentVariables,
   buildBotInvocationEvent,
-  getBotsTriggeredFromQueues
+  getBotsTriggeredFromQueues,
+  fetchAll
 }
