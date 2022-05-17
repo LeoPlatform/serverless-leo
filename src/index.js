@@ -10,6 +10,7 @@ const validate = require('./lib/validate')
 const compileLeo = require('./lib/leo')
 const utils = require('./lib/utils')
 const { generateConfig, getConfigFullPath, populateEnvFromConfig } = require('./lib/generateConfig')
+const { editConfig } = require("./lib/config-parameters")
 
 // TODO: sls create - Place tempates in memorable cdn location like https://dsco.io/aws-nodejs-leo-microservice
 // TODO: sls create bot - Place all templates in memorable cdn location, and publish them, but also create the schortcuts like `sls create bot --name my-bot-name`
@@ -120,13 +121,27 @@ class ServerlessLeo {
         }
       },
       'generate-config': {
-        usage: 'Run a leo bot locally',
+        usage: 'Compiles rsf config definition to javascript or typescript',
         lifecycleEvents: [
           'run'
         ],
         options: {
           file: {
-            usage: 'Specify the name of the bot',
+            usage: 'File path of the config definition',
+            shortcut: 'f',
+            type: 'string'
+          }
+        }
+      },
+
+      'edit-config': {
+        usage: 'Edit rsf config definition to add resources',
+        lifecycleEvents: [
+          'run'
+        ],
+        options: {
+          file: {
+            usage: 'File path of the config definition',
             shortcut: 'f',
             type: 'string'
           }
@@ -421,6 +436,12 @@ class ServerlessLeo {
           this.serverless.service.provider.stackParameters = this.origStackParams
         }
 
+      },
+      'edit-config:run': async () => {
+        let opts = { ...this.serverless.pluginManager.cliOptions }
+        let file = getConfigFullPath(this.serverless, opts.file)
+        await editConfig(this.serverless, file, opts.region)
+        generateConfig(file)
       },
     }
   }

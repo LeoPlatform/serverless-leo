@@ -116,7 +116,9 @@ function generateConfig(filePath) {
         let t = field.type === 'dynamic' ? 'unknown' : field.type
 
         if (!knownTypes[t]) {
-          imports.add(t)
+          if (!t.startsWith("{")) {
+            imports.add(t)
+          }
         } else {
           t = knownTypes[t]
         }
@@ -297,14 +299,14 @@ function getConfigReferences(config, useSecretsManager, lookups = [], permission
         }; break
         case 'ssm': v = { 'Fn::Sub': `{{resolve:ssm:${value.key}}}` }; break
         case 'secret':
-          if (!useSecretsManager || (value.options && value.options.resolve === 'deploy')) {
-            let parts = value.key.split('.')
-            parts.splice(1, 0, 'SecretString')
-            v = { 'Fn::Sub': `{{resolve:secretsmanager:${parts.join(':')}}}` }
-          } else {
+          if ((value.options && value.options.resolve === 'runtime')) {
             v = { 'Fn::Sub': `secret::${value.key}::${value.type}` }
             let secretKey = value.key.split('.')[0]
             permissions.add(`arn:aws:secretsmanager:*:\$\{AWS::AccountId\}:secret:${secretKey}-*`)
+          } else {
+            let parts = value.key.split('.')
+            parts.splice(1, 0, 'SecretString')
+            v = { 'Fn::Sub': `{{resolve:secretsmanager:${parts.join(':')}}}` }
           }
           break
         case 'stack': v = {
@@ -335,7 +337,7 @@ function getConfigEnv(serverless, file, config) {
   const stage = serverless.service.provider.stage
   const custom = serverless.service.custom[stage] ? serverless.service.custom[stage] : serverless.service.custom
   const leoStack = custom.leoStack || serverless.service.custom.leoStack
-  const useSecretsManager = serverless.service.custom.leo.rsfConfigResolutionType === 'secretsmanager' || serverless.service.custom.leo.rsfConfigResolutionType == null
+  const useSecretsManager = serverless.service.custom.leo.rsfConfigType === 'secretsmanager'
 
   let { output, lookups, permissions } = getConfigReferences(config, useSecretsManager)
 
@@ -570,6 +572,7 @@ function getConfigEnv(serverless, file, config) {
     } : {}
   }
 }
+
 function populateEnvFromConfig(serverless, file, config) {
   let { params, env, resources } = getConfigEnv(serverless, file, config)
   if (env) {
@@ -600,6 +603,7 @@ function populateEnvFromConfig(serverless, file, config) {
       }, {}), serverless.service.resources.Parameters)
   }
 }
+
 module.exports = {
   generateConfig,
   getConfigFullPath,
