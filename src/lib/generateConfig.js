@@ -394,6 +394,7 @@ async function resolveConfigForLocal(serverless, cache = {}) {
   if (!busConfigFromCache && rstreamsConfigEnvTemplate) {
     let v = await resolveFnSub(rstreamsConfigEnvTemplate, serverless, cache);
     serverless.service.provider.environment.RSTREAMS_CONFIG = v;
+    fs.mkdirSync(path.dirname(busConfigFileCache), { recursive: true });
     fs.writeFileSync(busConfigFileCache, JSON.stringify(JSON.parse(v), null, 2));
   }
 
