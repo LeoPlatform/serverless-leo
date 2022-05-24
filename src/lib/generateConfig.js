@@ -4,8 +4,7 @@ const fs = require('fs')
 const path = require('path')
 const { fetchAll } = require("./utils");
 
-const resolveCfImportValue = require("serverless/lib/plugins/aws/utils/resolveCfImportValue");
-const resolveCfRefValue = require('serverless/lib/plugins/aws/utils/resolveCfRefValue');
+const resolveCfRefValue = require('serverless/lib/plugins/aws/utils/resolve-cf-ref-value');
 
 let ts
 try {
