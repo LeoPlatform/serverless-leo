@@ -13,7 +13,10 @@ const reservedFields = {
   queue: true,
   source: true,
   destination: true,
-  suffix: true
+  suffix: true,
+}
+const reservedBotFields = {
+  tags: true
 }
 
 const replaceTextPairsInFile = (filePath, replacementPairs) => {
@@ -105,7 +108,29 @@ const getBotInfo = (serviceName, stage, ymlFunctionName, leoEvents, leoEventInde
   }
 
   // Extract any extra fileds from the leo event
-  let extraSettings = Object.entries(config).filter(([key]) => !reservedFields[key]).reduce((a, [key, value]) => { a[key] = value; return a }, {})
+  let extraSettings = Object.entries(config).filter(([key]) => !reservedFields[key] && !reservedBotFields[key]).reduce((a, [key, value]) => { a[key] = value; return a }, {})
+
+  let botFields = Object.entries(config).filter(([key]) => reservedBotFields[key]).reduce((a, [key, value]) => { a[key] = value; return a }, {})
+
+  // Fix tags to be a comma sepreated string 
+  if (botFields.tags && !Array.isArray(botFields.tags)) {
+    botFields.tags = [botFields.tags];
+  }
+  if (Array.isArray(botFields.tags)) {
+    botFields.tags = botFields.tags.map(v => {
+      if (v != null && typeof v === "object") {
+        return Object.entries(v).map(([key, value]) => `${key}:${value}`).join(",")
+      }
+      return v;
+    }).join(",")
+  }
+
+  // Add app tag if it is missing
+  if (!botFields.tags || !botFields.tags.match(/app:/)) {
+    botFields.tags = [botFields.tags, `app:${serviceName}`].filter(t => t).join(",")
+  }
+
+
 
   return {
     cron,
@@ -116,7 +141,8 @@ const getBotInfo = (serviceName, stage, ymlFunctionName, leoEvents, leoEventInde
     destination,
     register: config && config.register,
     suffix,
-    extraSettings
+    extraSettings,
+    botFields
   }
 }
 

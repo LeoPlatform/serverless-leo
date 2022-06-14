@@ -70,15 +70,18 @@ module.exports = {
                 destination,
                 register,
                 suffix,
-                extraSettings
+                extraSettings,
+                botFields
               } = getBotInfo(this.serverless.service.service, stage, ymlFunctionName, leoEvents, eventIndex, config, botNumber, this.serverless.service.custom.leo)
 
               const installProperty = {
+                ...botFields,
                 id,
                 name,
                 time: cron,
                 type: 'cron',
-                settings: Object.assign(extraSettings, {
+                settings: {
+                  ...extraSettings,
                   botNumber,
                   botCount: config.botCount,
                   codeOverrides: config && config.codeOverrides,
@@ -87,7 +90,7 @@ module.exports = {
                   source,
                   destination,
                   suffix
-                }),
+                },
                 lambdaName: {
                   Ref: logicalId
                 }

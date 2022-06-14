@@ -339,7 +339,12 @@ class ServerlessLeo {
 
         serverless.service.provider.environment = serverless.service.provider.environment || {};
         serverless.service.provider.environment.RSF_INVOKE_STAGE = serverless.service.provider.stage;
-        await resolveConfigForLocal(this.serverless, {})
+        await resolveConfigForLocal(this.serverless, {
+          stack: (serverless.service.provider.stackParameters || []).reduce((all, one) => {
+            all[one.ParameterKey] = one.ParameterValue;
+            return all;
+          }, {})
+        })
 
         for (let functionData of botsToInvoke) {
           // Service directory may have been changed from a previous bot invoke, just reset it back
@@ -428,7 +433,7 @@ class ServerlessLeo {
       'before:aws:deploy:deploy:createStack': async () => {
         // Create doesn't use stack parameters so we need to remove them 
         // so the action doesn't fail
-        let params = this.serverless.service.provider.coreCloudFormationTemplate.Parameters || {}
+        let params = (this.serverless.service.provider.coreCloudFormationTemplate || {}).Parameters || {}
         let stackParams = this.serverless.service.provider.stackParameters || []
         this.serverless.service.provider.stackParameters = stackParams.filter(a => a.ParameterKey in params)
         this.origStackParams = stackParams;

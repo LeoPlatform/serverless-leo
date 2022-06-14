@@ -542,7 +542,7 @@ function getConfigEnv(serverless, file, config) {
         } else if (key.match(/^AWS::.*$/i)) {
           // AWS var
           return
-        } else if (serverless.service.resources.Resources[key] || serverless.service.resources.Parameters[key]) {
+        } else if ((serverless.service.resources.Resources && serverless.service.resources.Resources[key]) || (serverless.service.resources.Parameters && serverless.service.resources.Parameters[key])) {
           // Stack var
           return
         }
