@@ -4,7 +4,15 @@ const fs = require('fs')
 const path = require('path')
 const { fetchAll } = require("./utils");
 
-const resolveCfRefValue = require('serverless/lib/plugins/aws/utils/resolve-cf-ref-value');
+
+// Try to get serverless 3 version, if that fails try serverless 2 version
+let resolveCfRefValue;
+try {
+  resolveCfRefValue = require('serverless/lib/plugins/aws/utils/resolve-cf-ref-value');
+} catch (err) {
+  resolveCfRefValue = require('serverless/lib/plugins/aws/utils/resolveCfRefValue');
+}
+
 
 let ts
 try {
