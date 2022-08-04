@@ -6,11 +6,39 @@ const { fetchAll } = require("./utils");
 
 
 // Try to get serverless 3 version, if that fails try serverless 2 version
-let resolveCfRefValue;
-try {
-  resolveCfRefValue = require('serverless/lib/plugins/aws/utils/resolve-cf-ref-value');
-} catch (err) {
-  resolveCfRefValue = require('serverless/lib/plugins/aws/utils/resolveCfRefValue');
+// let resolveCfRefValue;
+// try {
+//   resolveCfRefValue = require('serverless/lib/plugins/aws/utils/resolve-cf-ref-value');
+// } catch (err) {
+//   resolveCfRefValue = require('serverless/lib/plugins/aws/utils/resolveCfRefValue');
+// }
+async function resolveCfRefValue(provider, resourceLogicalId, sdkParams = {}) {
+
+  let params = (provider.serverless.service.resources.Parameters || {});
+  if (resourceLogicalId in params) {
+    return (provider.serverless.service.provider.stackParameters || {})[resourceLogicalId]
+  }
+
+  return provider
+    .request(
+      'CloudFormation',
+      'listStackResources',
+      Object.assign({ StackName: provider.naming.getStackName() }, sdkParams)
+    )
+    .then((result) => {
+      const targetStackResource = result.StackResourceSummaries.find(
+        (stackResource) => stackResource.LogicalResourceId === resourceLogicalId
+      );
+      if (targetStackResource) return targetStackResource.PhysicalResourceId;
+      if (result.NextToken) {
+        return resolveCfRefValue(provider, resourceLogicalId, { NextToken: result.NextToken });
+      }
+
+      throw new Error(
+        `Could not resolve Ref with name ${resourceLogicalId}. Are you sure this value matches one resource logical ID ?`,
+        'CF_REF_RESOLUTION'
+      );
+    });
 }
 
 
@@ -126,14 +154,29 @@ function generateConfig(filePath) {
       if (field.service != null && field.key != null && field.type != null) {
         let t = field.type === 'dynamic' ? 'unknown' : field.type
 
-        if (!knownTypes[t]) {
-          if (!t.startsWith("{")) {
-            imports.add(t)
-          }
-        } else {
-          t = knownTypes[t]
+        let collection = "TYPE";
+        let matchParts;
+        if (matchParts = t.match(/\[\]$/)) {
+          t = t.replace(/\[\]$/, "");
+          collection = "TYPE[]";
+        } else if (matchParts = t.match(/(Map|Set|Array)<(.*?)>/)) {
+          collection = `${matchParts[1]}<TYPE>`;
+          t = matchParts[2].split(",").map(t => t.trim());
         }
-        return t
+        if (!Array.isArray(t)) {
+          t = [t];
+        }
+        t = t.map(t => {
+          if (!knownTypes[t]) {
+            if (!t.startsWith("{")) {
+              imports.add(t)
+            }
+          } else {
+            t = knownTypes[t]
+          }
+          return t;
+        }).join(", ")
+        return collection.replace("TYPE", t);
       } else {
         let nextDepth = depth += spaces
         let r = Object.entries(field).map(([key, value]) => {
@@ -308,6 +351,9 @@ function getConfigReferences(config, useSecretsManager, lookups = [], permission
             'Fn::Sub': value.key
           }
         }; break
+        case 'cfr': v = {
+          'Ref': value.key.replace(/\./g, "").replace(/\$\{.*?\}/g, "")
+        }; break
         case 'ssm': v = { 'Fn::Sub': `{{resolve:ssm:${value.key}}}` }; break
         case 'secret':
           if ((value.options && value.options.resolve === 'runtime')) {
@@ -369,6 +415,7 @@ async function resolveConfigForLocal(serverless, cache = {}) {
     cf: {},
     sm: {},
     ssm: {},
+    cfr: {},
     ...cache
   };
 
@@ -454,6 +501,13 @@ const resolveServices = {
     }
     return cache.cf[key];
   },
+  cfr: async (provider, key, cache) => {
+    if (!(key in cache.cfr)) {
+      let [stack, resource] = key.split(".");
+      cache.cfr[key] = await resolveCfRefValue(provider, resource, { StackName: stack });
+    }
+    return cache.cfr[key];
+  },
   stack: async (provider, key, cache) => {
     if (!(key in cache.stack)) {
       cache.stack[key] = await resolveCfRefValue(provider, key);
@@ -532,7 +586,6 @@ function getConfigEnv(serverless, file, config) {
   let { output, lookups, permissions } = getConfigReferences(config, useSecretsManager)
 
   let params = {};
-
   // Find Stack Parameters
   (JSON.stringify(lookups).match(/\$\{(.*?)\}/g) || []).forEach((a) => {
     let key = a.replace(/^\$\{(.*)\}$/, '$1')
@@ -656,7 +709,6 @@ function getConfigEnv(serverless, file, config) {
     }
     serverless.service.resources.Mappings = Object.assign(map, serverless.service.resources.Mappings)
   }
-
 
   return {
     env: Object.assign({

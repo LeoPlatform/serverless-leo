@@ -340,7 +340,8 @@ const buildBotInvocationEvent = (serverless, options) => {
     id: botInfo.id,
     iid: '0',
     ts: Date.now(),
-    force: true
+    force: true,
+    ignoreLock: process.env.IGNORE_LOCK === "true"
   }
   return event
 }

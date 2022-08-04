@@ -29,13 +29,6 @@ functions:
     handler: helloNode.handler
     memorySize: 128
     timeout: 10
-    # vpc:
-    #   securityGroupIds:
-		# 			- sg-4a7f2525
-		# 	subnetIds:
-		# 			- subnet-cb1d2bbc
-		# 			- subnet-682be831
-		# 			- subnet-b89f1193
     events:
       - leo: test_hello
 

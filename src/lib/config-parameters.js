@@ -36,6 +36,12 @@ function tokenize(service, value, extra, stageRegex) {
 	let rsfTokenTag = (tags || []).find(t => t.Key === "rsf:token");
 	let tokenizedValue
 	if (rsfTokenTag) {
+		try {
+			rsfTokenTag.Value = Buffer.from(rsfTokenTag.Value, "base64").toString();
+		} catch (e) {
+			// not base64
+		}
+
 		tokenizedValue = rsfTokenTag.Value.replace(/__(.*?)__/g, (all, capture) => {
 			return `\${${capture}}`;
 		});
@@ -203,7 +209,7 @@ async function editConfig(serverless, configPath, region) {
 		}).reduce(mergeTokens, {})
 
 		let secretsTokenized = secrets.SecretList.map(v => {
-			return tokenize("secrets", v.Name, v, stageRegex)
+			return tokenize("secret", v.Name, v, stageRegex)
 		}).reduce(mergeTokens, {})
 
 		let cfTokenized = cfexports.Exports.map(v => {
@@ -218,6 +224,23 @@ async function editConfig(serverless, configPath, region) {
 		fs.mkdirSync(path.dirname(awsResourcesCachePath), { recursive: true });
 		fs.writeFileSync(awsResourcesCachePath, JSON.stringify(allTokenized, null, 2));
 	}
+
+	let stackResources = serverless.service.resources || {};
+	Object.entries(stackResources.Resources || {}).map(([key, entry]) => {
+		let type = "";
+		return tokenize("stack", key + (type ? `::${type}` : ""), entry, /^$/);
+	}).reduce(mergeTokens, allTokenized);
+
+	const ParameterTypes = {
+		"String": "string",
+		"CommaDelimitedList": "string[]",
+		"Number": "number",
+		"List<Number>": "number[]",
+	};
+	Object.entries(stackResources.Parameters || {}).map(([key, entry]) => {
+		let type = ParameterTypes[entry.Type];
+		return tokenize("stack", key + (type ? `::${type}` : ""), entry, /^$/);
+	}).reduce(mergeTokens, allTokenized);
 
 	function search(value) {
 		if (!value) {
