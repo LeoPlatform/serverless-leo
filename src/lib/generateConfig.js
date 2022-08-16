@@ -391,7 +391,7 @@ function getConfigReferences(config, useSecretsManager, lookups = [], permission
 }
 
 async function resolveConfigForLocal(serverless, cache = {}) {
-  let fullStage = `${serverless.providers.aws.options.region}-${serverless.service.provider.environment.RSF_INVOKE_STAGE}`;
+  let fullStage = `${serverless.providers.aws.getRegion()}-${serverless.service.provider.environment.RSF_INVOKE_STAGE}`;
   let configFromCache = false;
   let configFileCache = path.resolve(serverless.config.serviceDir, `.rsf/config-${fullStage}.json`);
   if (fs.existsSync(configFileCache)) {
@@ -540,7 +540,7 @@ async function resolveFnSub(fnSub, serverless, cache) {
     lookups = l;
   }
   Object.entries({
-    "AWS::Region": serverless.providers.aws.options.region,
+    "AWS::Region": serverless.providers.aws.getRegion(),
     "AWS::StackName": serverless.providers.aws.naming.getStackName()
   }).forEach(([key, value]) => {
     lookups[key] = value;
