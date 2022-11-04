@@ -282,8 +282,9 @@ class ServerlessLeo {
         await this.hooks["before:package:createDeploymentArtifacts"]();
         let webpackPlugin = this.serverless.pluginManager.plugins.find(s => s.constructor.name === 'ServerlessWebpack')
 
+        let skipWebpack = (this.serverless.service.custom.leo || {}).skipWebpack !== false;
         // Setup the node runner
-        if (opts.runner === 'node' && (this.serverless.service.provider.runtime || '').match(/^nodejs/)) {
+        if (skipWebpack && opts.runner === 'node' && (this.serverless.service.provider.runtime || '').match(/^nodejs/)) {
           // Try and find the tsconfig build directory
           let tsConfigPath = path.resolve(process.cwd(), 'tsconfig.json')
           if (fs.existsSync(tsConfigPath)) {

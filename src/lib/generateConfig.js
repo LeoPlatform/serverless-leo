@@ -82,6 +82,9 @@ function generateConfig(filePath) {
   let interfaceName = Object.keys(interfaces)[0]
   let configInterface = interfaces[interfaceName] || {}
   function expandConfig(projectConfig, path) {
+    if (projectConfig == null || typeof projectConfig != "object") {
+      return projectConfig;
+    }
     let o = {}
     Object.entries(projectConfig).forEach(([key, value]) => {
       let fieldPath = path.concat(key)
@@ -106,7 +109,11 @@ function generateConfig(filePath) {
         value != null && typeof value === 'object' &&
         (value.service == null || value.key == null || value.type == null)
       ) {
-        value = expandConfig(value, fieldPath)
+        if (Array.isArray(value)) {
+          value = value.map((a, i) => expandConfig(a, fieldPath.concat(i)))
+        } else {
+          value = expandConfig(value, fieldPath)
+        }
       }
       o[key] = value
     })
@@ -179,10 +186,28 @@ function generateConfig(filePath) {
         return collection.replace("TYPE", t);
       } else {
         let nextDepth = depth += spaces
-        let r = Object.entries(field).map(([key, value]) => {
-          return `${nextDepth}${key}: ${getType(value, nextDepth)};`
-        }).join('\n')
-        return `{\n${r}\n${depth.substring(0, depth.length - spacesLength)}}`
+        if (Array.isArray(field)) {
+
+          // Get unique set of types in the array
+          let r = Array.from(new Set(Object.entries(field).map(([key, value]) => {
+            return getType(value, nextDepth);
+          })));
+
+          // Join them togethere if there is more than 1
+          let rLen = r.length;
+          r = r.join("|");
+          if (rLen > 1) {
+            r = `(${r})`;
+          }
+
+          // return array type
+          return `${r}[]`;
+        } else {
+          let r = Object.entries(field).map(([key, value]) => {
+            return `${nextDepth}${key}: ${getType(value, nextDepth)};`
+          }).join('\n')
+          return `{\n${r}\n${depth.substring(0, depth.length - spacesLength)}}`
+        }
       }
     } else {
       return typeof field
@@ -269,7 +294,7 @@ function flattenVariables(obj, out, separator, prefix) {
 }
 
 function toProperCase(text) {
-  return text.replace(/[^a-zA-Z0-9]+/g, '_').replace(/(^\w|_\w)/g, function(txt) {
+  return text.replace(/[^a-zA-Z0-9]+/g, '_').replace(/(^\w|_\w)/g, function (txt) {
     return txt.charAt(txt.length === 1 ? 0 : 1).toUpperCase()
   })
 }
@@ -284,7 +309,7 @@ function getDataSafe(data = {}, path = '') {
 }
 
 function resolveKeywords(template, data, opts) {
-  const name = template.replace(/\${(.*?)}/g, function(match, field) {
+  const name = template.replace(/\${(.*?)}/g, function (match, field) {
     let value = getDataSafe(data, field.trim())
     if (value != null && typeof value === 'object') {
       value = JSON.stringify(value, null, opts.spaces || 2)
@@ -362,7 +387,7 @@ function getConfigReferences(config, useSecretsManager, lookups = [], permission
             permissions.add(`arn:aws:secretsmanager:*:\$\{AWS::AccountId\}:secret:${secretKey}-*`)
           } else {
             let parts = value.key.split('.')
-            parts.splice(1, 0, 'SecretString')
+            parts = [parts[0], 'SecretString'].concat(parts.splice(1).join("."));
             v = { 'Fn::Sub': `{{resolve:secretsmanager:${parts.join(':')}}}` }
           }
           break

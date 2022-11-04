@@ -87,8 +87,12 @@ const getBotInfo = (serviceName, stage, ymlFunctionName, leoEvents, leoEventInde
   if (!botPrefix && !suffix && !source && leoEvents.length > 1) {
     botSuffix = `-${leoEventIndex}${botSuffix}`
   }
+
+  if (config.id) {
+    id = config.id;
+  }
   // Only add the queue to the bot name if there are multiple events and no prefix
-  if (source && !botPrefix && leoEvents.length > 1) {
+  else if (source && !botPrefix && leoEvents.length > 1) {
     id = `${serviceName}-${stage}-${botPrefix}${source}-${ymlFunctionName}${botSuffix}`
   } else {
     id = `${serviceName}-${stage}-${botPrefix}${ymlFunctionName}${botSuffix}`
