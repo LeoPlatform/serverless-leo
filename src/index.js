@@ -10,7 +10,7 @@ const validate = require('./lib/validate')
 const compileLeo = require('./lib/leo')
 const utils = require('./lib/utils')
 const { generateConfig, getConfigFullPath, populateEnvFromConfig, resolveConfigForLocal } = require('./lib/generateConfig')
-const { editConfig } = require("./lib/config-parameters")
+const { editConfig } = require('./lib/config-parameters')
 
 // TODO: sls create - Place tempates in memorable cdn location like https://dsco.io/aws-nodejs-leo-microservice
 // TODO: sls create bot - Place all templates in memorable cdn location, and publish them, but also create the schortcuts like `sls create bot --name my-bot-name`
@@ -197,7 +197,7 @@ class ServerlessLeo {
         let slsConfig = this.serverless.service
         let tokens = slsConfig.custom.leo.rsfTemplateTokens || {}
 
-        const replacements = [];
+        const replacements = []
         Object.entries(tokens).map(([key, token]) => {
           let value = opts[key]
           if (value == null) {
@@ -205,8 +205,8 @@ class ServerlessLeo {
             opts[key] = value
           }
           replacements.push([token, value])
-          if (key === "rstreams-bus" && token.match(/-Bus-/)) {
-            replacements.push([token.replace(/-Bus-.*$/, "-Bus"), value.replace(/-Bus-.*$/, "-Bus")])
+          if (key === 'rstreams-bus' && token.match(/-Bus-/)) {
+            replacements.push([token.replace(/-Bus-.*$/, '-Bus'), value.replace(/-Bus-.*$/, '-Bus')])
           }
         })
 
@@ -279,10 +279,10 @@ class ServerlessLeo {
       },
       'invoke-bot:leo-local': async () => {
         let opts = { ...this.serverless.pluginManager.cliOptions }
-        await this.hooks["before:package:createDeploymentArtifacts"]();
+        await this.hooks['before:package:createDeploymentArtifacts']()
         let webpackPlugin = this.serverless.pluginManager.plugins.find(s => s.constructor.name === 'ServerlessWebpack')
 
-        let skipWebpack = (this.serverless.service.custom.leo || {}).skipWebpack !== false;
+        let skipWebpack = (this.serverless.service.custom.leo || {}).skipWebpack !== false
         // Setup the node runner
         if (skipWebpack && opts.runner === 'node' && (this.serverless.service.provider.runtime || '').match(/^nodejs/)) {
           // Try and find the tsconfig build directory
@@ -339,14 +339,14 @@ class ServerlessLeo {
 
         let serviceDir = this.serverless.serviceDir
 
-        serverless.service.provider.environment = serverless.service.provider.environment || {};
-        serverless.service.provider.environment.RSF_INVOKE_STAGE = serverless.service.provider.stage;
+        serverless.service.provider.environment = serverless.service.provider.environment || {}
+        serverless.service.provider.environment.RSF_INVOKE_STAGE = serverless.service.provider.stage
         await resolveConfigForLocal(this.serverless, {
           stack: (serverless.service.provider.stackParameters || []).reduce((all, one) => {
             if (one != null) {
-              all[one.ParameterKey] = one.ParameterValue;
+              all[one.ParameterKey] = one.ParameterValue
             }
-            return all;
+            return all
           }, {})
         })
 
@@ -435,28 +435,27 @@ class ServerlessLeo {
         generateConfig(file)
       },
       'before:aws:deploy:deploy:createStack': async () => {
-        // Create doesn't use stack parameters so we need to remove them 
+        // Create doesn't use stack parameters so we need to remove them
         // so the action doesn't fail
         let params = (this.serverless.service.provider.coreCloudFormationTemplate || {}).Parameters || {}
         let stackParams = this.serverless.service.provider.stackParameters || []
         this.serverless.service.provider.stackParameters = stackParams.filter(a => a.ParameterKey in params)
-        this.origStackParams = stackParams;
+        this.origStackParams = stackParams
       },
 
       'before:aws:deploy:deploy:updateStack': async () => {
-        // Create doesn't use stack parameters so we had to remove them 
+        // Create doesn't use stack parameters so we had to remove them
         // add them back so the action doesn't fail
         if (this.origStackParams != null) {
           this.serverless.service.provider.stackParameters = this.origStackParams
         }
-
       },
       'edit-config:run': async () => {
         let opts = { ...this.serverless.pluginManager.cliOptions }
         let file = getConfigFullPath(this.serverless, opts.file)
         await editConfig(this.serverless, file, opts.region)
         generateConfig(file)
-      },
+      }
     }
   }
 }
