@@ -452,7 +452,6 @@ async function resolveConfigForLocal(serverless, cache = {}) {
   // Resolve config env var
   let rsfConfigEnvTemplate = serverless.service.provider.environment && serverless.service.provider.environment.RSF_CONFIG
   if (!configFromCache && rsfConfigEnvTemplate) {
-    console.log('rsfConfigEnvTemplate:', rsfConfigEnvTemplate)
     let v = await resolveFnSub(rsfConfigEnvTemplate, serverless, cache)
     serverless.service.provider.environment.RSF_CONFIG = v
   }

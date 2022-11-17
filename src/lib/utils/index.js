@@ -13,14 +13,14 @@ const reservedFields = {
   queue: true,
   source: true,
   destination: true,
-  suffix: true,
+  suffix: true
 }
 const reservedBotFields = {
   tags: true
 }
 
 const replaceTextPairsInFile = (filePath, replacementPairs) => {
-  let path = filePath;
+  let path = filePath
   let fileContent = fs.readFileSync(filePath).toString()
   replacementPairs.forEach((replacementPair) => {
     fileContent = fileContent.replace(new RegExp(replacementPair[0], 'g'), replacementPair[1])
@@ -89,7 +89,7 @@ const getBotInfo = (serviceName, stage, ymlFunctionName, leoEvents, leoEventInde
   }
 
   if (config.id) {
-    id = config.id;
+    id = config.id
   }
   // Only add the queue to the bot name if there are multiple events and no prefix
   else if (source && !botPrefix && leoEvents.length > 1) {
@@ -116,25 +116,23 @@ const getBotInfo = (serviceName, stage, ymlFunctionName, leoEvents, leoEventInde
 
   let botFields = Object.entries(config).filter(([key]) => reservedBotFields[key]).reduce((a, [key, value]) => { a[key] = value; return a }, {})
 
-  // Fix tags to be a comma sepreated string 
+  // Fix tags to be a comma sepreated string
   if (botFields.tags && !Array.isArray(botFields.tags)) {
-    botFields.tags = [botFields.tags];
+    botFields.tags = [botFields.tags]
   }
   if (Array.isArray(botFields.tags)) {
     botFields.tags = botFields.tags.map(v => {
-      if (v != null && typeof v === "object") {
-        return Object.entries(v).map(([key, value]) => `${key}:${value}`).join(",")
+      if (v != null && typeof v === 'object') {
+        return Object.entries(v).map(([key, value]) => `${key}:${value}`).join(',')
       }
-      return v;
-    }).join(",")
+      return v
+    }).join(',')
   }
 
   // Add app tag if it is missing
   if (!botFields.tags || !botFields.tags.match(/app:/)) {
-    botFields.tags = [botFields.tags, `app:${serviceName}`].filter(t => t).join(",")
+    botFields.tags = [botFields.tags, `app:${serviceName}`].filter(t => t).join(',')
   }
-
-
 
   return {
     cron,
@@ -283,7 +281,7 @@ const buildBotInvocationEvent = (serverless, options) => {
   if (matchingFunctions.length > 1) {
     functionKey = matchingFunctions.find(i => i === lambdaName)
     if (!functionKey) {
-      throw new Error('Multiple matches found for bot name/lambda, please be more specific.')
+      throw new Error(`Multiple matches found for bot name/lambda, please be more specific. ${matchingFunctions.join(', ')}`)
     }
   } else if (matchingFunctions.length === 1) {
     functionKey = matchingFunctions[0]
@@ -340,24 +338,24 @@ const buildBotInvocationEvent = (serverless, options) => {
 
   // Add local invocation overrides
   Object.entries({ ...process.env, ...serverless.pluginManager.cliOptions }).forEach(([key, value]) => {
-    let command = key.match(/^leo[_-](event|env)[_-](.*)$/i);
+    let command = key.match(/^leo[_-](event|env)[_-](.*)$/i)
     if (command) {
-      let obj = process.env;
-      let field = command[2];
+      let obj = process.env
+      let field = command[2]
 
-      if (command[1] === "event") {
-        let path = field.split(".");
-        field = path.pop();
-        obj = path.reduce((a, b) => a[b] = a[b] || {}, event);
+      if (command[1] === 'event') {
+        let path = field.split('.')
+        field = path.pop()
+        obj = path.reduce((a, b) => a[b] = a[b] || {}, event)
       }
 
       if (value.match(/^\d+(?:\.\d*)?$/)) {
         value = parseFloat(value)
       }
 
-      obj[field] = value;
+      obj[field] = value
     }
-  });
+  })
 
   // Create the BotInvocationEvent structure
   event.botId = botInfo.id
@@ -366,7 +364,7 @@ const buildBotInvocationEvent = (serverless, options) => {
     iid: '0',
     ts: Date.now(),
     force: true,
-    ignoreLock: process.env.IGNORE_LOCK === "true"
+    ignoreLock: process.env.IGNORE_LOCK === 'true'
   }
   return event
 }
@@ -391,23 +389,21 @@ const getBotsTriggeredFromQueues = (serverless, queues = []) => {
 }
 
 async function fetchAll(fn) {
-  let response = {};
+  let response = {}
   do {
-    let r = await fn(response && response.NextToken);
+    let r = await fn(response && response.NextToken)
 
-    delete response.NextToken;
+    delete response.NextToken
     Object.entries(r).forEach(([key, value]) => {
       if (Array.isArray(value)) {
-        response[key] = (response[key] || []).concat(value);
+        response[key] = (response[key] || []).concat(value)
       } else {
         response[key] = value
       }
     })
   } while (response.NextToken)
-  return response;
+  return response
 }
-
-
 
 module.exports = {
   getBotInfo,
