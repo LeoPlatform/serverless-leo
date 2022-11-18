@@ -2,8 +2,7 @@
 /* eslint-disable no-template-curly-in-string */
 const fs = require('fs')
 const path = require('path')
-const { fetchAll } = require("./utils");
-
+const { fetchAll } = require('./utils')
 
 // Try to get serverless 3 version, if that fails try serverless 2 version
 // let resolveCfRefValue;
@@ -13,8 +12,7 @@ const { fetchAll } = require("./utils");
 //   resolveCfRefValue = require('serverless/lib/plugins/aws/utils/resolveCfRefValue');
 // }
 async function resolveCfRefValue(provider, resourceLogicalId, sdkParams = {}) {
-
-  let params = (provider.serverless.service.resources.Parameters || {});
+  let params = (provider.serverless.service.resources.Parameters || {})
   if (resourceLogicalId in params) {
     return (provider.serverless.service.provider.stackParameters || {})[resourceLogicalId]
   }
@@ -28,19 +26,18 @@ async function resolveCfRefValue(provider, resourceLogicalId, sdkParams = {}) {
     .then((result) => {
       const targetStackResource = result.StackResourceSummaries.find(
         (stackResource) => stackResource.LogicalResourceId === resourceLogicalId
-      );
-      if (targetStackResource) return targetStackResource.PhysicalResourceId;
+      )
+      if (targetStackResource) return targetStackResource.PhysicalResourceId
       if (result.NextToken) {
-        return resolveCfRefValue(provider, resourceLogicalId, { NextToken: result.NextToken });
+        return resolveCfRefValue(provider, resourceLogicalId, { NextToken: result.NextToken })
       }
 
       throw new Error(
         `Could not resolve Ref with name ${resourceLogicalId}. Are you sure this value matches one resource logical ID ?`,
         'CF_REF_RESOLUTION'
-      );
-    });
+      )
+    })
 }
-
 
 let ts
 try {
@@ -82,6 +79,9 @@ function generateConfig(filePath) {
   let interfaceName = Object.keys(interfaces)[0]
   let configInterface = interfaces[interfaceName] || {}
   function expandConfig(projectConfig, path) {
+    if (projectConfig == null || typeof projectConfig !== 'object') {
+      return projectConfig
+    }
     let o = {}
     Object.entries(projectConfig).forEach(([key, value]) => {
       let fieldPath = path.concat(key)
@@ -106,7 +106,11 @@ function generateConfig(filePath) {
         value != null && typeof value === 'object' &&
         (value.service == null || value.key == null || value.type == null)
       ) {
-        value = expandConfig(value, fieldPath)
+        if (Array.isArray(value)) {
+          value = value.map((a, i) => expandConfig(a, fieldPath.concat(i)))
+        } else {
+          value = expandConfig(value, fieldPath)
+        }
       }
       o[key] = value
     })
@@ -154,35 +158,52 @@ function generateConfig(filePath) {
       if (field.service != null && field.key != null && field.type != null) {
         let t = field.type === 'dynamic' ? 'unknown' : field.type
 
-        let collection = "TYPE";
-        let matchParts;
+        let collection = 'TYPE'
+        let matchParts
         if (matchParts = t.match(/\[\]$/)) {
-          t = t.replace(/\[\]$/, "");
-          collection = "TYPE[]";
+          t = t.replace(/\[\]$/, '')
+          collection = 'TYPE[]'
         } else if (matchParts = t.match(/(Map|Set|Array)<(.*?)>/)) {
-          collection = `${matchParts[1]}<TYPE>`;
-          t = matchParts[2].split(",").map(t => t.trim());
+          collection = `${matchParts[1]}<TYPE>`
+          t = matchParts[2].split(',').map(t => t.trim())
         }
         if (!Array.isArray(t)) {
-          t = [t];
+          t = [t]
         }
         t = t.map(t => {
           if (!knownTypes[t]) {
-            if (!t.startsWith("{")) {
+            if (!t.startsWith('{')) {
               imports.add(t)
             }
           } else {
             t = knownTypes[t]
           }
-          return t;
-        }).join(", ")
-        return collection.replace("TYPE", t);
+          return t
+        }).join(', ')
+        return collection.replace('TYPE', t)
       } else {
         let nextDepth = depth += spaces
-        let r = Object.entries(field).map(([key, value]) => {
-          return `${nextDepth}${key}: ${getType(value, nextDepth)};`
-        }).join('\n')
-        return `{\n${r}\n${depth.substring(0, depth.length - spacesLength)}}`
+        if (Array.isArray(field)) {
+          // Get unique set of types in the array
+          let r = Array.from(new Set(Object.entries(field).map(([key, value]) => {
+            return getType(value, nextDepth)
+          })))
+
+          // Join them togethere if there is more than 1
+          let rLen = r.length
+          r = r.join('|')
+          if (rLen > 1) {
+            r = `(${r})`
+          }
+
+          // return array type
+          return `${r}[]`
+        } else {
+          let r = Object.entries(field).map(([key, value]) => {
+            return `${nextDepth}${key}: ${getType(value, nextDepth)};`
+          }).join('\n')
+          return `{\n${r}\n${depth.substring(0, depth.length - spacesLength)}}`
+        }
       }
     } else {
       return typeof field
@@ -269,7 +290,7 @@ function flattenVariables(obj, out, separator, prefix) {
 }
 
 function toProperCase(text) {
-  return text.replace(/[^a-zA-Z0-9]+/g, '_').replace(/(^\w|_\w)/g, function(txt) {
+  return text.replace(/[^a-zA-Z0-9]+/g, '_').replace(/(^\w|_\w)/g, function (txt) {
     return txt.charAt(txt.length === 1 ? 0 : 1).toUpperCase()
   })
 }
@@ -284,7 +305,7 @@ function getDataSafe(data = {}, path = '') {
 }
 
 function resolveKeywords(template, data, opts) {
-  const name = template.replace(/\${(.*?)}/g, function(match, field) {
+  const name = template.replace(/\${(.*?)}/g, function (match, field) {
     let value = getDataSafe(data, field.trim())
     if (value != null && typeof value === 'object') {
       value = JSON.stringify(value, null, opts.spaces || 2)
@@ -352,7 +373,7 @@ function getConfigReferences(config, useSecretsManager, lookups = [], permission
           }
         }; break
         case 'cfr': v = {
-          'Ref': value.key.replace(/\./g, "").replace(/\$\{.*?\}/g, "")
+          'Ref': value.key.replace(/\./g, '').replace(/\$\{.*?\}/g, '')
         }; break
         case 'ssm': v = { 'Fn::Sub': `{{resolve:ssm:${value.key}}}` }; break
         case 'secret':
@@ -362,7 +383,7 @@ function getConfigReferences(config, useSecretsManager, lookups = [], permission
             permissions.add(`arn:aws:secretsmanager:*:\$\{AWS::AccountId\}:secret:${secretKey}-*`)
           } else {
             let parts = value.key.split('.')
-            parts.splice(1, 0, 'SecretString')
+            parts = [parts[0], 'SecretString'].concat(parts.splice(1).join('.'))
             v = { 'Fn::Sub': `{{resolve:secretsmanager:${parts.join(':')}}}` }
           }
           break
@@ -372,6 +393,14 @@ function getConfigReferences(config, useSecretsManager, lookups = [], permission
       }
       output[key] = `\${RSF${lookups.length}}`
       lookups.push(v)
+    } else if (value != null && Array.isArray(value)) {
+      let r = value.map(v => {
+        if (v == null || typeof (v) !== 'object') {
+          return v
+        }
+        return getConfigReferences(v, useSecretsManager, lookups, permissions).output
+      })
+      output[key] = r
     } else if (value != null && typeof value === 'object') {
       let r = getConfigReferences(value, useSecretsManager, lookups, permissions)
       output[key] = r.output
@@ -391,20 +420,20 @@ function getConfigReferences(config, useSecretsManager, lookups = [], permission
 }
 
 async function resolveConfigForLocal(serverless, cache = {}) {
-  let fullStage = `${serverless.providers.aws.getRegion()}-${serverless.service.provider.environment.RSF_INVOKE_STAGE}`;
-  let configFromCache = false;
-  let serviceDir = serverless.config.serviceDir || serverless.config.servicePath;
-  let configFileCache = path.resolve(serviceDir, `.rsf/config-${fullStage}.json`);
+  let fullStage = `${serverless.providers.aws.getRegion()}-${serverless.service.provider.environment.RSF_INVOKE_STAGE}`
+  let configFromCache = false
+  let serviceDir = serverless.config.serviceDir || serverless.config.servicePath
+  let configFileCache = path.resolve(serviceDir, `.rsf/config-${fullStage}.json`)
   if (fs.existsSync(configFileCache)) {
-    let stat = fs.statSync(configFileCache);
-    let duration = Math.floor((Date.now() - stat.mtimeMs) / 1000);
+    let stat = fs.statSync(configFileCache)
+    let duration = Math.floor((Date.now() - stat.mtimeMs) / 1000)
 
     // Default cache duration is 30 min
-    let validCacheDuration = (+process.env.RSF_CACHE_SECONDS) || 1800;
+    let validCacheDuration = (+process.env.RSF_CACHE_SECONDS) || 1800
     if (duration < validCacheDuration) {
       try {
-        serverless.service.provider.environment.RSF_CONFIG = JSON.stringify(module.require(configFileCache));
-        configFromCache = true;
+        serverless.service.provider.environment.RSF_CONFIG = JSON.stringify(module.require(configFileCache))
+        configFromCache = true
       } catch (e) {
         // Error getting cache
       }
@@ -418,27 +447,27 @@ async function resolveConfigForLocal(serverless, cache = {}) {
     ssm: {},
     cfr: {},
     ...cache
-  };
-
-  // Resolve config env var
-  let rsfConfigEnvTemplate = serverless.service.provider.environment && serverless.service.provider.environment.RSF_CONFIG;
-  if (!configFromCache && rsfConfigEnvTemplate) {
-    let v = await resolveFnSub(rsfConfigEnvTemplate, serverless, cache);
-    serverless.service.provider.environment.RSF_CONFIG = v;
   }
 
-  let busConfigFromCache = false;
-  let busConfigFileCache = path.resolve(serviceDir, `.rsf/bus-config-${fullStage}.json`);
+  // Resolve config env var
+  let rsfConfigEnvTemplate = serverless.service.provider.environment && serverless.service.provider.environment.RSF_CONFIG
+  if (!configFromCache && rsfConfigEnvTemplate) {
+    let v = await resolveFnSub(rsfConfigEnvTemplate, serverless, cache)
+    serverless.service.provider.environment.RSF_CONFIG = v
+  }
+
+  let busConfigFromCache = false
+  let busConfigFileCache = path.resolve(serviceDir, `.rsf/bus-config-${fullStage}.json`)
   if (fs.existsSync(busConfigFileCache)) {
-    let stat = fs.statSync(busConfigFileCache);
-    let duration = Math.floor((Date.now() - stat.mtimeMs) / 1000);
+    let stat = fs.statSync(busConfigFileCache)
+    let duration = Math.floor((Date.now() - stat.mtimeMs) / 1000)
 
     // Default cache duration is 30 min
-    let validCacheDuration = (+process.env.RSF_CACHE_SECONDS) || 1800;
+    let validCacheDuration = (+process.env.RSF_CACHE_SECONDS) || 1800
     if (duration < validCacheDuration) {
       try {
-        serverless.service.provider.environment.RSTREAMS_CONFIG = JSON.stringify(module.require(busConfigFileCache));
-        busConfigFromCache = true;
+        serverless.service.provider.environment.RSTREAMS_CONFIG = JSON.stringify(module.require(busConfigFileCache))
+        busConfigFromCache = true
       } catch (e) {
         // Error getting cache
       }
@@ -446,138 +475,137 @@ async function resolveConfigForLocal(serverless, cache = {}) {
   }
 
   // Resolve bus env config if it exists
-  let rstreamsConfigEnvTemplate = serverless.service.provider.environment && serverless.service.provider.environment.RSTREAMS_CONFIG;
+  let rstreamsConfigEnvTemplate = serverless.service.provider.environment && serverless.service.provider.environment.RSTREAMS_CONFIG
   if (!busConfigFromCache && rstreamsConfigEnvTemplate) {
-    let v = await resolveFnSub(rstreamsConfigEnvTemplate, serverless, cache);
-    serverless.service.provider.environment.RSTREAMS_CONFIG = v;
-    fs.mkdirSync(path.dirname(busConfigFileCache), { recursive: true });
-    fs.writeFileSync(busConfigFileCache, JSON.stringify(JSON.parse(v), null, 2));
+    let v = await resolveFnSub(rstreamsConfigEnvTemplate, serverless, cache)
+    serverless.service.provider.environment.RSTREAMS_CONFIG = v
+    fs.mkdirSync(path.dirname(busConfigFileCache), { recursive: true })
+    fs.writeFileSync(busConfigFileCache, JSON.stringify(JSON.parse(v), null, 2))
   }
 
   // Resolve bus env secret if it exists
-  let rstreamsConfigEnvSecretTemplate = serverless.service.provider.environment && serverless.service.provider.environment.RSTREAMS_CONFIG_SECRET;
+  let rstreamsConfigEnvSecretTemplate = serverless.service.provider.environment && serverless.service.provider.environment.RSTREAMS_CONFIG_SECRET
   if (rstreamsConfigEnvSecretTemplate) {
-    let v = await resolveFnSub(rstreamsConfigEnvSecretTemplate, serverless, cache);
-    serverless.service.provider.environment.RSTREAMS_CONFIG_SECRET = v;
+    let v = await resolveFnSub(rstreamsConfigEnvSecretTemplate, serverless, cache)
+    serverless.service.provider.environment.RSTREAMS_CONFIG_SECRET = v
   }
-
 }
 
 const resolveServices = {
   secretsmanager: async (provider, key, cache) => {
-    let parts = key.split(":");
-    let id = parts.shift();
-    let last = parts.pop();
-    let value;
+    let parts = key.split(':')
+    let id = parts.shift()
+    let last = parts.pop()
+    let value
     if (id in cache.sm) {
-      value = cache.sm[id];
+      value = cache.sm[id]
     } else {
-      value = await provider.request("SecretsManager", "getSecretValue", { SecretId: id });
-      cache.sm[id] = value;
+      value = await provider.request('SecretsManager', 'getSecretValue', { SecretId: id })
+      cache.sm[id] = value
     }
 
     return parts.reduce((o, k) => {
-      let v = o[k] || {};
-      if (typeof v === "string") {
-        v = JSON.parse(v);
+      let v = o[k] || {}
+      if (typeof v === 'string') {
+        v = JSON.parse(v)
       }
-      return v;
-    }, value)[last];
+      return v
+    }, value)[last]
   },
   ssm: async (provider, key, cache) => {
     if (key in cache.ssm) {
       return cache.ssm[key]
     } else {
-      let value = await provider.request("SSM", "getParameter", { Name: key });
-      cache.ssm[key] = value.Parameter.Value;
-      return value.Parameter.Value;
+      let value = await provider.request('SSM', 'getParameter', { Name: key })
+      cache.ssm[key] = value.Parameter.Value
+      return value.Parameter.Value
     }
   },
   cf: async (provider, key, cache) => {
     if (Object.keys(cache.cf).length === 0) {
-      let allCfExports = await fetchAll(t => provider.request("CloudFormation", "listExports", { NextToken: t }));
+      let allCfExports = await fetchAll(t => provider.request('CloudFormation', 'listExports', { NextToken: t }))
       allCfExports.Exports.forEach(v => {
-        cache.cf[v.Name] = v.Value;
-      });
+        cache.cf[v.Name] = v.Value
+      })
     }
-    return cache.cf[key];
+    return cache.cf[key]
   },
   cfr: async (provider, key, cache) => {
     if (!(key in cache.cfr)) {
-      let [stack, resource] = key.split(".");
-      cache.cfr[key] = await resolveCfRefValue(provider, resource, { StackName: stack });
+      let [stack, resource] = key.split('.')
+      cache.cfr[key] = await resolveCfRefValue(provider, resource, { StackName: stack })
     }
-    return cache.cfr[key];
+    return cache.cfr[key]
   },
   stack: async (provider, key, cache) => {
     if (!(key in cache.stack)) {
-      cache.stack[key] = await resolveCfRefValue(provider, key);
+      cache.stack[key] = await resolveCfRefValue(provider, key)
     }
-    return cache.stack[key];
+    return cache.stack[key]
   }
-};
+}
 
 async function resolveFnSub(fnSub, serverless, cache) {
   let lookups = {
     ...(serverless.service.provider.stackParameters || []).reduce((all, one) => {
       if (one != null) {
-        let paramDef = (serverless.service.resources.Parameters || {})[one.ParameterKey];
+        let paramDef = (serverless.service.resources.Parameters || {})[one.ParameterKey]
         if (paramDef && paramDef.Type.match(/AWS::SSM::Parameter/)) {
           all[one.ParameterKey] = `{{resolve:ssm:${one.ParameterValue}}}`
         } else {
-          all[one.ParameterKey] = one.ParameterValue;
+          all[one.ParameterKey] = one.ParameterValue
         }
       }
-      return all;
+      return all
     }, {}),
-    ...serverless.service.resources.Resources,
-  };
-  if (fnSub != null && typeof fnSub === "object" && fnSub["Fn::Sub"]) {
-    fnSub = fnSub["Fn::Sub"];
+    ...serverless.service.resources.Resources
+  }
+  if (fnSub != null && typeof fnSub === 'object' && fnSub['Fn::Sub']) {
+    fnSub = fnSub['Fn::Sub']
   }
 
-  let template = fnSub;
+  let template = fnSub
   if (Array.isArray(fnSub)) {
-    let [t, l] = fnSub;
-    template = t;
-    lookups = l;
+    let [t, l] = fnSub
+    template = t
+    lookups = l
   }
   Object.entries({
-    "AWS::Region": serverless.providers.aws.getRegion(),
-    "AWS::StackName": serverless.providers.aws.naming.getStackName()
+    'AWS::Region': serverless.providers.aws.getRegion(),
+    'AWS::StackName': serverless.providers.aws.naming.getStackName()
   }).forEach(([key, value]) => {
-    lookups[key] = value;
-  });
-  let entries = Object.entries(lookups);
+    lookups[key] = value
+  })
+  let entries = Object.entries(lookups)
   for (let i = 0; i < entries.length; i++) {
-    let [key, value] = entries[i];
-    if (value != null && typeof value === "object" && value["Fn::Sub"]) {
-      value = await resolveFnSub(value["Fn::Sub"], serverless, cache);
+    let [key, value] = entries[i]
+    if (value != null && typeof value === 'object' && value['Fn::Sub']) {
+      value = await resolveFnSub(value['Fn::Sub'], serverless, cache)
     }
-    if (value != null && typeof value === "object") {
+    if (value != null && typeof value === 'object') {
       if (value.Ref) {
-        let preValue = value.Ref;
-        value = await resolveServices.stack(serverless.providers.aws, preValue, cache);
-      } else if (value["Fn::ImportValue"]) {
-        let preValue = await resolveFnSub(value["Fn::ImportValue"], serverless, cache);
-        value = await resolveServices.cf(serverless.providers.aws, preValue, cache);
+        let preValue = value.Ref
+        value = await resolveServices.stack(serverless.providers.aws, preValue, cache)
+      } else if (value['Fn::ImportValue']) {
+        let preValue = await resolveFnSub(value['Fn::ImportValue'], serverless, cache)
+        value = await resolveServices.cf(serverless.providers.aws, preValue, cache)
       }
-    } else if (typeof value === "string") {
-      let [, service, key] = (value.match(/{{resolve:(secretsmanager|ssm):(.*)}}$/) || []);
+    } else if (typeof value === 'string') {
+      let [, service, key] = (value.match(/{{resolve:(secretsmanager|ssm):(.*)}}$/) || [])
       if (service && resolveServices[service]) {
-        value = await resolveServices[service](serverless.providers.aws, key, cache);
+        value = await resolveServices[service](serverless.providers.aws, key, cache)
       }
     }
-    lookups[key] = value;
+    lookups[key] = value
   }
 
   return template.replace(/\${(.*?)}/g, (_, key) => {
-    let v = lookups[key];
-    if (typeof v !== "string") {
-      v = JSON.stringify(v);
+    let v = lookups[key]
+    if (typeof v !== 'string') {
+      v = JSON.stringify(v)
     }
-    return v;
-  });
+    return v
+  })
 }
 
 function getConfigEnv(serverless, file, config) {
@@ -587,8 +615,7 @@ function getConfigEnv(serverless, file, config) {
   const useSecretsManager = ((serverless.service.custom || {}).leo || {}).rsfConfigType === 'secretsmanager'
 
   let { output, lookups, permissions } = getConfigReferences(config, useSecretsManager)
-  let hasConfig = Object.keys(output || {}).length > 0;
-
+  let hasConfig = Object.keys(output || {}).length > 0
   let params = {};
   // Find Stack Parameters
   (JSON.stringify(lookups).match(/\$\{(.*?)\}/g) || []).forEach((a) => {
@@ -665,7 +692,6 @@ function getConfigEnv(serverless, file, config) {
     }
   })
 
-
   let rsfConfigName = {
     'Fn::Sub': 'rsf-config-${AWS::StackName}-${AWS::Region}'
   }
@@ -698,17 +724,17 @@ function getConfigEnv(serverless, file, config) {
       }).reduce((a, [key, values]) => {
         if (serverless.service.custom.leo.rsfConfigReplicationRegions &&
           serverless.service.custom.leo.rsfConfigReplicationRegions[key]) {
-          values = serverless.service.custom.leo.rsfConfigReplicationRegions[key];
+          values = serverless.service.custom.leo.rsfConfigReplicationRegions[key]
           if (!Array.isArray(values)) {
-            values = [values];
+            values = [values]
           }
         }
         a[key] = {
           values: values.map(region => ({
             Region: region
           }))
-        };
-        return a;
+        }
+        return a
       }, {})
     }
     serverless.service.resources.Mappings = Object.assign(map, serverless.service.resources.Mappings)
@@ -808,7 +834,7 @@ function getConfigEnv(serverless, file, config) {
               JSON.stringify(output, null, 2), lookups
             ]
           },
-          ReplicaRegions: { "Fn::FindInMap": ["RSFReplicaMap", { "Ref": "AWS::Region" }, "values"] },
+          ReplicaRegions: { 'Fn::FindInMap': ['RSFReplicaMap', { 'Ref': 'AWS::Region' }, 'values'] },
           Tags: [{
             Key: 'service',
             Value: serverless.service.service
