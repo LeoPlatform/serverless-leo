@@ -334,6 +334,27 @@ const buildBotInvocationEvent = (serverless, options) => {
     serverless.service.custom.leo || {}
   )
 
+  // Add local invocation overrides
+  Object.entries({ ...process.env, ...serverless.pluginManager.cliOptions }).forEach(([key, value]) => {
+    let command = key.match(/^leo[_-](event|env)[_-](.*)$/i);
+    if (command) {
+      let obj = process.env;
+      let field = command[2];
+
+      if (command[1] === "event") {
+        let path = field.split(".");
+        field = path.pop();
+        obj = path.reduce((a, b) => a[b] = a[b] || {}, event);
+      }
+
+      if (value.match(/^\d+(?:\.\d*)?$/)) {
+        value = parseFloat(value)
+      }
+
+      obj[field] = value;
+    }
+  });
+
   // Create the BotInvocationEvent structure
   event.botId = botInfo.id
   event.__cron = {

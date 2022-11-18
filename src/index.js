@@ -254,10 +254,11 @@ class ServerlessLeo {
       'before:package:createDeploymentArtifacts': () => {
         let opts = { ...this.serverless.pluginManager.cliOptions }
         let file = getConfigFullPath(this.serverless, opts.file)
-        if (state.generatedConfig || !fs.existsSync(file)) {
+        if (state.generatedConfig) {
           return BbPromise.resolve()
         }
         state.generatedConfig = true
+
         return BbPromise.bind(this)
           .then(() => generateConfig(file))
           .then((d) => populateEnvFromConfig(this.serverless, file, d))
@@ -341,7 +342,9 @@ class ServerlessLeo {
         serverless.service.provider.environment.RSF_INVOKE_STAGE = serverless.service.provider.stage;
         await resolveConfigForLocal(this.serverless, {
           stack: (serverless.service.provider.stackParameters || []).reduce((all, one) => {
-            all[one.ParameterKey] = one.ParameterValue;
+            if (one != null) {
+              all[one.ParameterKey] = one.ParameterValue;
+            }
             return all;
           }, {})
         })

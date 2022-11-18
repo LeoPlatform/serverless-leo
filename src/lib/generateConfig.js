@@ -55,7 +55,7 @@ function generateConfig(filePath) {
   let ext = isTS ? '.ts' : '.js'
   let dTSFilePath = filePath.replace(/\..*\.json$/, '.d.ts')
   let configOutputPath = filePath.replace(/\..*\.json$/, ext)
-  let projectConfigTxt = fs.readFileSync(filePath).toString()
+  let projectConfigTxt = fs.existsSync(filePath) && fs.readFileSync(filePath).toString()
   if (!projectConfigTxt) {
     return
   }
@@ -269,7 +269,7 @@ function flattenVariables(obj, out, separator, prefix) {
 }
 
 function toProperCase(text) {
-  return text.replace(/[^a-zA-Z0-9]+/g, '_').replace(/(^\w|_\w)/g, function (txt) {
+  return text.replace(/[^a-zA-Z0-9]+/g, '_').replace(/(^\w|_\w)/g, function(txt) {
     return txt.charAt(txt.length === 1 ? 0 : 1).toUpperCase()
   })
 }
@@ -284,7 +284,7 @@ function getDataSafe(data = {}, path = '') {
 }
 
 function resolveKeywords(template, data, opts) {
-  const name = template.replace(/\${(.*?)}/g, function (match, field) {
+  const name = template.replace(/\${(.*?)}/g, function(match, field) {
     let value = getDataSafe(data, field.trim())
     if (value != null && typeof value === 'object') {
       value = JSON.stringify(value, null, opts.spaces || 2)
@@ -331,7 +331,7 @@ function getConfigFullPath(serverless, file) {
   if (file) {
     file = path.resolve(process.cwd(), file)
   } else if (serverless.service.custom.leo && serverless.service.custom.leo.configurationPath) {
-    file = path.resolve(serverless.serviceDir, serverless.service.custom.leo.configurationPath)
+    file = path.resolve(serverless.serviceDir || serverless.servicePath, serverless.service.custom.leo.configurationPath)
   } else {
     file = path.resolve(process.cwd(), './project-config.def.json')
   }
@@ -340,7 +340,7 @@ function getConfigFullPath(serverless, file) {
 
 function getConfigReferences(config, useSecretsManager, lookups = [], permissions = new Set()) {
   let output = {}
-  Object.entries(config).forEach(([key, value]) => {
+  Object.entries(config || {}).forEach(([key, value]) => {
     if (value != null && typeof value === 'object' &&
       value.service != null && value.key != null && value.type != null) {
       value.key = value.key.replace(/\$\{region\}/gi, '${AWS::Region}')
@@ -393,7 +393,8 @@ function getConfigReferences(config, useSecretsManager, lookups = [], permission
 async function resolveConfigForLocal(serverless, cache = {}) {
   let fullStage = `${serverless.providers.aws.getRegion()}-${serverless.service.provider.environment.RSF_INVOKE_STAGE}`;
   let configFromCache = false;
-  let configFileCache = path.resolve(serverless.config.serviceDir, `.rsf/config-${fullStage}.json`);
+  let serviceDir = serverless.config.serviceDir || serverless.config.servicePath;
+  let configFileCache = path.resolve(serviceDir, `.rsf/config-${fullStage}.json`);
   if (fs.existsSync(configFileCache)) {
     let stat = fs.statSync(configFileCache);
     let duration = Math.floor((Date.now() - stat.mtimeMs) / 1000);
@@ -427,7 +428,7 @@ async function resolveConfigForLocal(serverless, cache = {}) {
   }
 
   let busConfigFromCache = false;
-  let busConfigFileCache = path.resolve(serverless.config.serviceDir, `.rsf/bus-config-${fullStage}.json`);
+  let busConfigFileCache = path.resolve(serviceDir, `.rsf/bus-config-${fullStage}.json`);
   if (fs.existsSync(busConfigFileCache)) {
     let stat = fs.statSync(busConfigFileCache);
     let duration = Math.floor((Date.now() - stat.mtimeMs) / 1000);
@@ -519,11 +520,13 @@ const resolveServices = {
 async function resolveFnSub(fnSub, serverless, cache) {
   let lookups = {
     ...(serverless.service.provider.stackParameters || []).reduce((all, one) => {
-      let paramDef = (serverless.service.resources.Parameters || {})[one.ParameterKey];
-      if (paramDef && paramDef.Type.match(/AWS::SSM::Parameter/)) {
-        all[one.ParameterKey] = `{{resolve:ssm:${one.ParameterValue}}}`
-      } else {
-        all[one.ParameterKey] = one.ParameterValue;
+      if (one != null) {
+        let paramDef = (serverless.service.resources.Parameters || {})[one.ParameterKey];
+        if (paramDef && paramDef.Type.match(/AWS::SSM::Parameter/)) {
+          all[one.ParameterKey] = `{{resolve:ssm:${one.ParameterValue}}}`
+        } else {
+          all[one.ParameterKey] = one.ParameterValue;
+        }
       }
       return all;
     }, {}),
@@ -581,9 +584,10 @@ function getConfigEnv(serverless, file, config) {
   const stage = serverless.service.provider.stage
   const custom = serverless.service.custom[stage] ? serverless.service.custom[stage] : serverless.service.custom
   const leoStack = custom.leoStack || serverless.service.custom.leoStack
-  const useSecretsManager = serverless.service.custom.leo.rsfConfigType === 'secretsmanager'
+  const useSecretsManager = ((serverless.service.custom || {}).leo || {}).rsfConfigType === 'secretsmanager'
 
   let { output, lookups, permissions } = getConfigReferences(config, useSecretsManager)
+  let hasConfig = Object.keys(output || {}).length > 0;
 
   let params = {};
   // Find Stack Parameters
@@ -711,13 +715,13 @@ function getConfigEnv(serverless, file, config) {
   }
 
   return {
-    env: Object.assign({
+    env: Object.assign(hasConfig ? {
       RSF_CONFIG: useSecretsManager ? rsfConfigName : {
         'Fn::Sub': [
           JSON.stringify(output), lookups
         ]
       }
-    }, useSecretsManager ? {
+    } : {}, useSecretsManager ? {
       // Add RStreams config resource
       RSTREAMS_CONFIG_SECRET: {
         'Fn::Sub': `rstreams-${leoStack}`
@@ -791,7 +795,7 @@ function getConfigEnv(serverless, file, config) {
     }),
 
     params: params,
-    resources: useSecretsManager ? {
+    resources: (hasConfig && useSecretsManager) ? {
       RSFConfig: {
         Type: 'AWS::SecretsManager::Secret',
         Properties: {
