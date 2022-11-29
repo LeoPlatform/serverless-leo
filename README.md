@@ -4,6 +4,7 @@
 
 # Compatability
   serverless-leo version 3 is compatable with serverless@2 and serverless@3
+  
   serverless@1 is not supported
 
 ## Examples
