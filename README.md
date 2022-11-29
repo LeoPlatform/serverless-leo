@@ -4,7 +4,7 @@
 
 # Compatability
   serverless-leo version 3 is compatable with serverless@2 and serverless@3
-  
+
   serverless@1 is not supported
 
 ## Examples
@@ -28,7 +28,7 @@ At this point, you will have a new project with a `bots` directory including you
 1. Set the name and deploymentBucket of your service in the root `serverless.yml` file
 2. Update the `leo_config.js` file to include the leo bus values your service will use
 
-## Rust specifc
+## Rust specific
 1. In order to register this lambda in your workspace, you need to add the relative path to the newly created folder in your root cargo.toml workspace members.
 2. Update the bus_config() of the main.rs in your newly created bot template to have the correct provider information.
 
