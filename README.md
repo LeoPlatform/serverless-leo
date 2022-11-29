@@ -2,8 +2,8 @@
 
 [Go to Docs](https://github.com/LeoPlatform/serverless-leo/tree/master/src#serverless-leo)
 
-# Compatability
-  serverless-leo version 3 is compatable with serverless@2 and serverless@3
+# Compatibility
+  serverless-leo version 3 is compatible with serverless@2 and serverless@3
 
   serverless@1 is not supported
 
