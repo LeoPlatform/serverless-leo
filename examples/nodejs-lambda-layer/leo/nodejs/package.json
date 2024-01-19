@@ -6,7 +6,7 @@
         "leo-aws": "1.4.3",
         "leo-cache": "1.0.1",
         "leo-config": "1.1.0",
-        "leo-connector-common": "3.0.4",
+        "leo-connector-common": "3.1.1",
         "leo-logger": "1.0.1",
         "leo-sdk": "3.1.2",
         "moment-timezone": "0.5.26"
