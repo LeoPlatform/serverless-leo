@@ -22,7 +22,7 @@ module.exports = {
 
     if (leoRegister) {
       customInstall.Properties.ServiceToken = leoRegister
-    } else {
+    } else if (leoStack) {
       customInstall.Properties.ServiceToken = {
         'Fn::ImportValue': {
           'Fn::Sub': `${leoStack}-Register`

@@ -9,8 +9,8 @@
   "author": "Taylor",
   "license": "MIT",
   "dependencies": {
-    "leo-aws": "^1.4.2",
-    "leo-sdk": "^2.2.8"
+    "leo-aws": "^2.0.2",
+    "leo-sdk": "^6.0.18"
   },
   "devDependencies": {
     "serverless-leo": "^1.0.3",

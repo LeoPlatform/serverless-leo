@@ -86,7 +86,7 @@ function generateConfig(filePath) {
     Object.entries(projectConfig).forEach(([key, value]) => {
       let fieldPath = path.concat(key)
       if (typeof value === 'string' && value.match(/^.+?::/)) {
-        let [service, key, type, opts] = value.split('::')
+        let [service, key, type, opts] = value.split(/(?<!AWS)::/)
         value = {
           is_config_reference: true,
           service,
@@ -151,7 +151,8 @@ function generateConfig(filePath) {
     'integer': 'number',
     'int': 'number',
     'dynamic': 'dynamic',
-    'unknown': 'unknown'
+    'unknown': 'unknown',
+    'undefined': 'undefined'
   }
   function getType(field, depth = '') {
     if (field != null && typeof field === 'object') {
@@ -170,15 +171,18 @@ function generateConfig(filePath) {
         if (!Array.isArray(t)) {
           t = [t]
         }
+        // t = t.reduce((a, b) => a.concat(b.split('|')), [])
         t = t.map(t => {
-          if (!knownTypes[t]) {
-            if (!t.startsWith('{')) {
-              imports.add(t)
+          return t.split('|').map(t => {
+            if (!knownTypes[t]) {
+              if (!t.startsWith('{')) {
+                imports.add(t)
+              }
+            } else {
+              t = knownTypes[t]
             }
-          } else {
-            t = knownTypes[t]
-          }
-          return t
+            return t
+          }).join('|')
         }).join(', ')
         return collection.replace('TYPE', t)
       } else {
@@ -200,7 +204,9 @@ function generateConfig(filePath) {
           return `${r}[]`
         } else {
           let r = Object.entries(field).map(([key, value]) => {
-            return `${nextDepth}${key}: ${getType(value, nextDepth)};`
+            // console.log(value)
+            const question = value.options && value.options.optional == true ? '?' : ''
+            return `${nextDepth}${key}${question}: ${getType(value, nextDepth)};`
           }).join('\n')
           return `{\n${r}\n${depth.substring(0, depth.length - spacesLength)}}`
         }
@@ -225,7 +231,7 @@ function generateConfig(filePath) {
       : 'const { ConfigurationBuilder } = require("leo-sdk/lib/configuration-builder");',
     isTS ? '${interfaceDef}' : '',
     // (isTS ? 'export default' : 'module.exports = ') + ' new ConfigurationBuilder' + (isTS ? '<${interfaceName}>' : '') + '(${config}).build(${buildConfig});'
-    (isTS ? 'export default' : 'module.exports = ') + ' new ConfigurationBuilder' + (isTS ? '<${interfaceName}>' : '') + '(process.env.RSF_CONFIG).build(${buildConfig});'
+    (isTS ? 'export default' : 'module.exports = ') + ' new ConfigurationBuilder' + (isTS ? '<${interfaceName}>' : '') + '(process.env.RSF_CONFIG ?? "").build(${buildConfig});'
   ].join('\n')
 
   let fileBody = resolveKeywords(template, {
@@ -364,7 +370,9 @@ function getConfigReferences(config, useSecretsManager, lookups = [], permission
   Object.entries(config || {}).forEach(([key, value]) => {
     if (value != null && typeof value === 'object' &&
       value.service != null && value.key != null && value.type != null) {
-      value.key = value.key.replace(/\$\{region\}/gi, '${AWS::Region}')
+      if (typeof value.key === 'string') {
+        value.key = value.key.replace(/\$\{region\}/gi, '${AWS::Region}').replace(/\$\{accountId\}/gi, '${AWS::AccountId}')
+      }
       let v
       switch (value.service) {
         case 'cf': v = {
@@ -388,8 +396,12 @@ function getConfigReferences(config, useSecretsManager, lookups = [], permission
           }
           break
         case 'stack': v = {
-          'Ref': value.key
+          [value.key.match(/\$\{/) ? 'Fn::Sub' : 'Ref']: value.key
         }; break
+        case 'static':
+          v = undefined
+          output[key] = value.key
+          return
       }
       output[key] = `\${RSF${lookups.length}}`
       lookups.push(v)
@@ -420,6 +432,7 @@ function getConfigReferences(config, useSecretsManager, lookups = [], permission
 }
 
 async function resolveConfigForLocal(serverless, cache = {}) {
+  let rsfConfigEnvTemplate = serverless.service.provider.environment && serverless.service.provider.environment.RSF_CONFIG
   let fullStage = `${serverless.providers.aws.getRegion()}-${serverless.service.provider.environment.RSF_INVOKE_STAGE}`
   let configFromCache = false
   let serviceDir = serverless.config.serviceDir || serverless.config.servicePath
@@ -431,9 +444,22 @@ async function resolveConfigForLocal(serverless, cache = {}) {
     // Default cache duration is 30 min
     let validCacheDuration = (+process.env.RSF_CACHE_SECONDS) || 1800
     if (duration < validCacheDuration) {
+      let prevTemplate
       try {
-        serverless.service.provider.environment.RSF_CONFIG = JSON.stringify(module.require(configFileCache))
-        configFromCache = true
+        prevTemplate = fs.readFileSync(path.resolve(serviceDir, `.rsf/config-${fullStage}-template.json`)).toString()
+      } catch (e) {
+        // nothing
+      }
+      try {
+        let stringifyedTemplate = JSON.stringify(rsfConfigEnvTemplate, null, 2)
+        if (prevTemplate === stringifyedTemplate) {
+          serverless.service.provider.environment.RSF_CONFIG = JSON.stringify(module.require(configFileCache))
+          configFromCache = true
+        } else {
+          // Remove the cached config
+          fs.unlinkSync(configFileCache)
+          fs.writeFileSync(path.resolve(serviceDir, `.rsf/config-${fullStage}-template.json`), stringifyedTemplate)
+        }
       } catch (e) {
         // Error getting cache
       }
@@ -450,7 +476,6 @@ async function resolveConfigForLocal(serverless, cache = {}) {
   }
 
   // Resolve config env var
-  let rsfConfigEnvTemplate = serverless.service.provider.environment && serverless.service.provider.environment.RSF_CONFIG
   if (!configFromCache && rsfConfigEnvTemplate) {
     let v = await resolveFnSub(rsfConfigEnvTemplate, serverless, cache)
     serverless.service.provider.environment.RSF_CONFIG = v
@@ -571,8 +596,16 @@ async function resolveFnSub(fnSub, serverless, cache) {
     lookups = l
   }
   Object.entries({
+    ...(Object.entries(process.env).reduce((all, [key, value]) => {
+      if (key.startsWith('AWS::')) {
+        all[key] = value
+      }
+      return all
+    }, {})),
+    'AWS::AccountId': await serverless.providers.aws.getAccountId(),
     'AWS::Region': serverless.providers.aws.getRegion(),
     'AWS::StackName': serverless.providers.aws.naming.getStackName()
+
   }).forEach(([key, value]) => {
     lookups[key] = value
   })
@@ -618,8 +651,8 @@ function getConfigEnv(serverless, file, config) {
   let hasConfig = Object.keys(output || {}).length > 0
   let params = {};
   // Find Stack Parameters
-  (JSON.stringify(lookups).match(/\$\{(.*?)\}/g) || []).forEach((a) => {
-    let key = a.replace(/^\$\{(.*)\}$/, '$1')
+  (JSON.stringify({ leoStack: leoStack, ...lookups }).match(/\$\{(.*?)\}/g) || []).forEach((a) => {
+    let key = a.replace(/^\$\{(.*)\}$/, '$1').split('.')[0]
     if (!(key in params)) {
       let value = serverless.pluginManager.cliOptions[key]
 
@@ -660,20 +693,34 @@ function getConfigEnv(serverless, file, config) {
   if (useSecretsManager) {
     secretsPermissions = secretsPermissions.concat({
       'Fn::Sub': 'arn:aws:secretsmanager:*:${AWS::AccountId}:secret:rsf-config-${AWS::StackName}-${AWS::Region}-*'
-    }, {
+    }, leoStack ? {
       'Fn::Sub': `arn:aws:secretsmanager:\${AWS::Region}:\${AWS::AccountId}:secret:rstreams-${leoStack}-*`
-    })
+    } : undefined).filter(a => a != null)
   }
 
   roles.forEach(roleName => {
-    let role = serverless.service.resources.Resources[roleName]
+    let role = (serverless.service.resources.Resources || {})[roleName]
 
     if (role) {
-      role.Properties.ManagedPolicyArns = (role.Properties.ManagedPolicyArns || []).concat({
-        'Fn::ImportValue': {
-          'Fn::Sub': `${leoStack}-Policy`
+      if (leoStack) {
+        let alreadyHasLeoPolicy = (role.Properties.ManagedPolicyArns || []).some(p => {
+          let policyImport = p['Fn::ImportValue']
+
+          if (policyImport && typeof policyImport === 'string' && policyImport === `${leoStack}-Policy`) {
+            return true
+          } else if (policyImport && typeof policyImport['Fn::Sub'] === 'string' && policyImport['Fn::Sub'] === `${leoStack}-Policy`) {
+            return true
+          }
+          return false
+        })
+        if (!alreadyHasLeoPolicy) {
+          role.Properties.ManagedPolicyArns = (role.Properties.ManagedPolicyArns || []).concat({
+            'Fn::ImportValue': {
+              'Fn::Sub': `${leoStack}-Policy`
+            }
+          })
         }
-      })
+      }
       if (secretsPermissions.length > 0) {
         role.Properties.Policies = (role.Properties.Policies || []).concat({
           PolicyName: 'RSFSecretAccess',
@@ -747,7 +794,7 @@ function getConfigEnv(serverless, file, config) {
           JSON.stringify(output), lookups
         ]
       }
-    } : {}, useSecretsManager ? {
+    } : {}, leoStack ? (useSecretsManager ? {
       // Add RStreams config resource
       RSTREAMS_CONFIG_SECRET: {
         'Fn::Sub': `rstreams-${leoStack}`
@@ -818,7 +865,7 @@ function getConfigEnv(serverless, file, config) {
           }
         }]
       }
-    }),
+    }) : {}),
 
     params: params,
     resources: (hasConfig && useSecretsManager) ? {
@@ -855,7 +902,7 @@ function populateEnvFromConfig(serverless, file, config) {
   }
   if (params) {
     serverless.service.provider.stackParameters = []
-      .concat(serverless.service.provider.stackParameters)
+      .concat(serverless.service.provider.stackParameters || [])
       .concat(Object.entries(params)
         .filter(([, value]) => value.Value != null)
         .map(([key, value]) => {

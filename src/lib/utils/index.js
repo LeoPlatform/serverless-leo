@@ -16,7 +16,8 @@ const reservedFields = {
   suffix: true
 }
 const reservedBotFields = {
-  tags: true
+  tags: true,
+  repoUrl: true
 }
 
 const replaceTextPairsInFile = (filePath, replacementPairs) => {
@@ -322,7 +323,13 @@ const buildBotInvocationEvent = (serverless, options) => {
   }
 
   if (!event) {
-    throw new Error('Could not match the bot name with the bot configurations')
+    if (serverless.pluginManager.cliOptions.data) {
+      event = JSON.parse(serverless.pluginManager.cliOptions.data)
+    }
+
+    if (!event) {
+      throw new Error('Could not match the bot name with the bot configurations')
+    }
   }
 
   const botInfo = getBotInfo(

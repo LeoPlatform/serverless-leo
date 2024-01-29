@@ -13,13 +13,13 @@ module.exports = {
       return { streams, errors }
     }
 
-    const custom = this.serverless.service.custom[stage] ? this.serverless.service.custom[stage] : this.serverless.service.custom;
-    const leoStack = custom.leoStack || this.serverless.service.custom.leoStack;
-    const leoRegister = custom.leoRegister || this.serverless.service.custom.leoRegister;
-    if (!leoStack && !leoRegister) {
-      errors.push(new Error(`Leo streams require the custom "leoStack" or "leoRegister" variable. Optionally under custom[stage]. Please verify your serverless.yml.`))
-      return { streams, errors }
-    }
+    // const custom = this.serverless.service.custom[stage] ? this.serverless.service.custom[stage] : this.serverless.service.custom
+    // const leoStack = custom.leoStack || this.serverless.service.custom.leoStack;
+    // const leoRegister = custom.leoRegister || this.serverless.service.custom.leoRegister;
+    // if (!leoStack && !leoRegister) {
+    //   errors.push(new Error(`Leo streams require the custom "leoStack" or "leoRegister" variable. Optionally under custom[stage]. Please verify your serverless.yml.`))
+    //   return { streams, errors }
+    // }
 
     forEach(this.serverless.service.functions, functionObject => {
       if (functionObject.events) {

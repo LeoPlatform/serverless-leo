@@ -113,6 +113,11 @@ class ServerlessLeo {
             usage: 'Source Bot will read from bus when mocking',
             shortcut: 's',
             type: 'boolean'
+          },
+          data: {
+            usage: 'pass in the event to use',
+            shortcut: 'd',
+            type: 'string'
           }
 
           // TODO flag to mock source only
@@ -279,6 +284,10 @@ class ServerlessLeo {
       },
       'invoke-bot:leo-local': async () => {
         let opts = { ...this.serverless.pluginManager.cliOptions }
+
+        // When running locally always use the env type so that the values are current to the local dev config
+        delete ((this.serverless.service.custom || {}).leo || {}).rsfConfigType
+
         await this.hooks['before:package:createDeploymentArtifacts']()
         let webpackPlugin = this.serverless.pluginManager.plugins.find(s => s.constructor.name === 'ServerlessWebpack')
 
@@ -294,7 +303,11 @@ class ServerlessLeo {
             } catch (err) {
               // remove any trailing commas and try to parse it again
               let tsConfigContent = fs.readFileSync(tsConfigPath).toString()
-                .replace(/[\n\r]+[ \t]*/g, '').replace(/,([}\]])/, '$1')
+                .replace(/[\r\n]+/g, '\n')
+                .replace(/[ \t]+\/\/.*?\n/gm, '')
+                .replace(/\/\*.*?\*\//g, '')
+                .replace(/[\n\r]+[ \t]*/g, '')
+                .replace(/,([}\]])/, '$1')
 
               tsConfig = JSON.parse(tsConfigContent)
             }
@@ -439,7 +452,7 @@ class ServerlessLeo {
         // so the action doesn't fail
         let params = (this.serverless.service.provider.coreCloudFormationTemplate || {}).Parameters || {}
         let stackParams = this.serverless.service.provider.stackParameters || []
-        this.serverless.service.provider.stackParameters = stackParams.filter(a => a.ParameterKey in params)
+        this.serverless.service.provider.stackParameters = stackParams.filter(a => a && a.ParameterKey in params)
         this.origStackParams = stackParams
       },
 
@@ -447,7 +460,7 @@ class ServerlessLeo {
         // Create doesn't use stack parameters so we had to remove them
         // add them back so the action doesn't fail
         if (this.origStackParams != null) {
-          this.serverless.service.provider.stackParameters = this.origStackParams
+          this.serverless.service.provider.stackParameters = this.origStackParams.filter(a => a != null)
         }
       },
       'edit-config:run': async () => {
