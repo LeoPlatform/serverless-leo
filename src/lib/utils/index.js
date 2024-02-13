@@ -271,6 +271,10 @@ const removeExternallyProvidedServerlessEnvironmentVariables = (serverless, func
  * @returns BotInvocationEvent
  */
 const buildBotInvocationEvent = (serverless, options) => {
+  if (serverless.pluginManager.cliOptions.data) {
+    return JSON.parse(serverless.pluginManager.cliOptions.data)
+  }
+
   const { function: functionName, name, botNumber = 0 } = options
 
   // Find the serverless function that matches the options
@@ -299,7 +303,7 @@ const buildBotInvocationEvent = (serverless, options) => {
   } else {
     // Find the leo event that exact matches `name`
     let filteredEvents = serverlessJson.events.filter((event, index) => {
-      if (Object.values(event.leo).some(leoKey => name === leoKey)) {
+      if (event.leo && Object.values(event.leo).some(leoKey => name === leoKey)) {
         eventIndex = index
         return true
       }
@@ -310,7 +314,7 @@ const buildBotInvocationEvent = (serverless, options) => {
     } else {
       // Find the leo event that regex matches `name`
       filteredEvents = serverlessJson.events.filter((event, index) => {
-        if (Object.values(event.leo).some(leoKey => new RegExp(name).test(leoKey))) {
+        if (event.leo && Object.values(event.leo).some(leoKey => new RegExp(name).test(leoKey))) {
           eventIndex = index
           return true
         }
@@ -323,13 +327,7 @@ const buildBotInvocationEvent = (serverless, options) => {
   }
 
   if (!event) {
-    if (serverless.pluginManager.cliOptions.data) {
-      event = JSON.parse(serverless.pluginManager.cliOptions.data)
-    }
-
-    if (!event) {
-      throw new Error('Could not match the bot name with the bot configurations')
-    }
+    throw new Error('Could not match the bot name with the bot configurations')
   }
 
   const botInfo = getBotInfo(
