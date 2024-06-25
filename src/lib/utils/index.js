@@ -258,7 +258,7 @@ const removeExternallyProvidedServerlessEnvironmentVariables = (serverless, func
   // Override any function level environment variables that already exists in process.env
   Object.entries(func.environment || {}).forEach(([key, value]) => {
     if (env[key] != null) {
-      func.environment[key] = value
+      func.environment[key] = env[key]
     }
   })
 }
