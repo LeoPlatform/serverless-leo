@@ -161,9 +161,11 @@ function generateConfig(filePath) {
 
         let collection = 'TYPE'
         let matchParts
+        // eslint-disable-next-line no-cond-assign
         if (matchParts = t.match(/\[\]$/)) {
           t = t.replace(/\[\]$/, '')
           collection = 'TYPE[]'
+          // eslint-disable-next-line no-cond-assign
         } else if (matchParts = t.match(/(Map|Set|Array)<(.*?)>/)) {
           collection = `${matchParts[1]}<TYPE>`
           t = matchParts[2].split(',').map(t => t.trim())
@@ -205,6 +207,7 @@ function generateConfig(filePath) {
         } else {
           let r = Object.entries(field).map(([key, value]) => {
             // console.log(value)
+            // eslint-disable-next-line eqeqeq
             const question = value.options && value.options.optional == true ? '?' : ''
             return `${nextDepth}${key}${question}: ${getType(value, nextDepth)};`
           }).join('\n')
@@ -477,8 +480,9 @@ async function resolveConfigForLocal(serverless, cache = {}) {
 
   // Resolve config env var
   if (!configFromCache && rsfConfigEnvTemplate) {
-    let v = await resolveFnSub(rsfConfigEnvTemplate, serverless, cache)
-    serverless.service.provider.environment.RSF_CONFIG = v
+    let v = { value: rsfConfigEnvTemplate }
+    await resolveTemplate(v, serverless, cache)
+    serverless.service.provider.environment.RSF_CONFIG = v.value
   }
 
   let busConfigFromCache = false
@@ -502,17 +506,19 @@ async function resolveConfigForLocal(serverless, cache = {}) {
   // Resolve bus env config if it exists
   let rstreamsConfigEnvTemplate = serverless.service.provider.environment && serverless.service.provider.environment.RSTREAMS_CONFIG
   if (!busConfigFromCache && rstreamsConfigEnvTemplate) {
-    let v = await resolveFnSub(rstreamsConfigEnvTemplate, serverless, cache)
-    serverless.service.provider.environment.RSTREAMS_CONFIG = v
+    let v = { value: rstreamsConfigEnvTemplate }
+    await resolveTemplate(v, serverless, cache)
+    serverless.service.provider.environment.RSTREAMS_CONFIG = v.value
     fs.mkdirSync(path.dirname(busConfigFileCache), { recursive: true })
-    fs.writeFileSync(busConfigFileCache, JSON.stringify(JSON.parse(v), null, 2))
+    fs.writeFileSync(busConfigFileCache, JSON.stringify(JSON.parse(v.value), null, 2))
   }
 
   // Resolve bus env secret if it exists
   let rstreamsConfigEnvSecretTemplate = serverless.service.provider.environment && serverless.service.provider.environment.RSTREAMS_CONFIG_SECRET
   if (rstreamsConfigEnvSecretTemplate) {
-    let v = await resolveFnSub(rstreamsConfigEnvSecretTemplate, serverless, cache)
-    serverless.service.provider.environment.RSTREAMS_CONFIG_SECRET = v
+    let v = { value: rstreamsConfigEnvSecretTemplate }
+    await resolveTemplate(v, serverless, cache)
+    serverless.service.provider.environment.RSTREAMS_CONFIG_SECRET = v.value
   }
 }
 
@@ -546,9 +552,26 @@ const resolveServices = {
       return value.Parameter.Value
     }
   },
-  cf: async (provider, key, cache) => {
+  cf: async (provider, key, cache, serverless) => {
     if (Object.keys(cache.cf).length === 0) {
-      let allCfExports = await fetchAll(t => provider.request('CloudFormation', 'listExports', { NextToken: t }))
+      let serviceDir = serverless.config.serviceDir || serverless.config.servicePath
+      let fullStage = `${serverless.providers.aws.getRegion()}-${serverless.service.provider.stage}`
+      let file = path.resolve(serviceDir, `.rsf/cf-exports-${fullStage}.json`)
+      let allCfExports
+      if (fs.existsSync(file)) {
+        let stat = fs.statSync(file)
+        let duration = Math.floor((Date.now() - stat.mtimeMs) / 1000)
+
+        // Default cache duration is 30 min
+        let validCacheDuration = (+process.env.RSF_CACHE_SECONDS) || 1800
+        if (duration < validCacheDuration) {
+          allCfExports = JSON.parse(fs.readFileSync(path.resolve(serviceDir, file)).toString())
+        }
+      }
+      if (allCfExports == null) {
+        allCfExports = await fetchAll(t => provider.request('CloudFormation', 'listExports', { NextToken: t }))
+        fs.writeFileSync(file, JSON.stringify(allCfExports))
+      }
       allCfExports.Exports.forEach(v => {
         cache.cf[v.Name] = v.Value
       })
@@ -570,32 +593,56 @@ const resolveServices = {
   }
 }
 
-async function resolveFnSub(fnSub, serverless, cache) {
-  let lookups = {
-    ...(serverless.service.provider.stackParameters || []).reduce((all, one) => {
-      if (one != null) {
-        let paramDef = (serverless.service.resources.Parameters || {})[one.ParameterKey]
-        if (paramDef && paramDef.Type.match(/AWS::SSM::Parameter/)) {
-          all[one.ParameterKey] = `{{resolve:ssm:${one.ParameterValue}}}`
-        } else {
-          all[one.ParameterKey] = one.ParameterValue
-        }
-      }
-      return all
-    }, {}),
-    ...serverless.service.resources.Resources
-  }
-  if (fnSub != null && typeof fnSub === 'object' && fnSub['Fn::Sub']) {
-    fnSub = fnSub['Fn::Sub']
+async function resolveTemplate(template, serverless, cache, lookups) {
+  if (lookups == null) {
+    lookups = await getLookups(serverless, cache)
   }
 
-  let template = fnSub
-  if (Array.isArray(fnSub)) {
-    let [t, l] = fnSub
-    template = t
-    lookups = l
+  for (let entry of Object.entries(template || {})) {
+    let [field, value] = entry
+    let type = typeof value
+
+    if (Array.isArray(value)) {
+      for (let v of value) {
+        await resolveTemplate(v, serverless, cache, lookups)
+      }
+    } else if (type === 'object' && value != null) {
+      if (value['Fn::Sub']) {
+        let v = { value: await resolveFnSub(value['Fn::Sub'], serverless, cache, lookups) }
+        await resolveTemplate(v, serverless, cache, lookups)
+        template[field] = v.value
+      } else if (value.Ref) {
+        template[field] = await resolveRef(value.Ref, serverless, cache, lookups)
+      } else if (value['Fn::ImportValue']) {
+        let t = { value: value['Fn::ImportValue'] }
+        await resolveTemplate(t, serverless, cache, lookups)
+        let preValue = t.value
+        template[field] = await resolveServices.cf(serverless.providers.aws, preValue, cache, serverless)
+      } else {
+        await resolveTemplate(value, serverless, cache, lookups)
+      }
+    } else if (type === 'string') {
+      let [, service, key] = (value.match(/{{resolve:(secretsmanager|ssm):(.*)}}$/) || [])
+      if (service && resolveServices[service]) {
+        template[field] = await resolveServices[service](serverless.providers.aws, key, cache)
+      }
+    }
   }
-  Object.entries({
+}
+
+async function resolveRef(preValue, serverless, cache, lookups) {
+  if (serverless.service.resources.Parameters[preValue]) {
+    return lookups[preValue]
+  } else if (serverless.service.resources.Conditions[preValue]) {
+    // ???
+    return preValue
+  } else {
+    return resolveServices.stack(serverless.providers.aws, preValue, cache)
+  }
+}
+
+async function getLookups(serverless, cache) {
+  let lookups = {
     ...(Object.entries(process.env).reduce((all, [key, value]) => {
       if (key.startsWith('AWS::')) {
         all[key] = value
@@ -605,40 +652,66 @@ async function resolveFnSub(fnSub, serverless, cache) {
     'AWS::AccountId': await serverless.providers.aws.getAccountId(),
     'AWS::Region': serverless.providers.aws.getRegion(),
     'AWS::StackName': serverless.providers.aws.naming.getStackName()
-
-  }).forEach(([key, value]) => {
-    lookups[key] = value
-  })
-  let entries = Object.entries(lookups)
-  for (let i = 0; i < entries.length; i++) {
-    let [key, value] = entries[i]
-    if (value != null && typeof value === 'object' && value['Fn::Sub']) {
-      value = await resolveFnSub(value['Fn::Sub'], serverless, cache)
-    }
-    if (value != null && typeof value === 'object') {
-      if (value.Ref) {
-        let preValue = value.Ref
-        value = await resolveServices.stack(serverless.providers.aws, preValue, cache)
-      } else if (value['Fn::ImportValue']) {
-        let preValue = await resolveFnSub(value['Fn::ImportValue'], serverless, cache)
-        value = await resolveServices.cf(serverless.providers.aws, preValue, cache)
-      }
-    } else if (typeof value === 'string') {
-      let [, service, key] = (value.match(/{{resolve:(secretsmanager|ssm):(.*)}}$/) || [])
-      if (service && resolveServices[service]) {
-        value = await resolveServices[service](serverless.providers.aws, key, cache)
-      }
-    }
-    lookups[key] = value
+    // 'Stage': serverless.service.provider.stage,
+    // 'StageTitleCase': serverless.service.provider.stage[0].toUpperCase() + serverless.service.provider.stage.substring(1)
   }
 
-  return template.replace(/\${(.*?)}/g, (_, key) => {
+  // Add all resources to the lookups
+  for (let entry of Object.entries(serverless.service.resources.Resources)) {
+    let [logicalId, value] = entry
+    let l = await (typeExpander[value.Type] || typeExpander.default)(logicalId, value, serverless, cache, lookups)
+    Object.assign(lookups, l || {})
+  }
+
+  // Add all stack params to the lookups
+  for (let one of (serverless.service.provider.stackParameters || [])) {
+    if (one != null) {
+      let paramDef = (serverless.service.resources.Parameters || {})[one.ParameterKey]
+      if (paramDef && paramDef.Type.match(/AWS::SSM::Parameter/)) {
+        let t = { value: `{{resolve:ssm:${one.ParameterValue}}}` }
+        await resolveTemplate(t, serverless, cache, lookups)
+        lookups[one.ParameterKey] = t.value
+      } else {
+        lookups[one.ParameterKey] = one.ParameterValue
+      }
+    }
+  }
+
+  return lookups
+}
+
+async function resolveFnSub(fnSub, serverless, cache, lookups) {
+  if (lookups == null) {
+    lookups = await getLookups(serverless, cache)
+  }
+
+  if (fnSub != null && typeof fnSub === 'object' && fnSub['Fn::Sub']) {
+    fnSub = fnSub['Fn::Sub']
+  }
+
+  let template = fnSub
+  if (Array.isArray(fnSub)) {
+    let [t, l] = fnSub
+    template = t
+    lookups = { ...lookups }
+
+    // Resolve any new values
+    let entries = Object.entries(l)
+    for (let i = 0; i < entries.length; i++) {
+      let [key, value] = entries[i]
+      let t = { value }
+      await resolveTemplate(t, serverless, cache, lookups)
+      lookups[key] = t.value
+    }
+  }
+
+  return typeof template === 'string' ? template.replace(/\${(.*?)}/g, (_, key) => {
     let v = lookups[key]
     if (typeof v !== 'string') {
       v = JSON.stringify(v)
     }
     return v
-  })
+  }) : template
 }
 
 function getConfigEnv(serverless, file, config) {
@@ -923,10 +996,33 @@ function populateEnvFromConfig(serverless, file, config) {
   }
 }
 
+/**
+ * Expand Resource Types to the needed properties for Fn::Sub
+ */
+const typeExpander = {
+  default: () => ({}),
+  'AWS::Lambda::Function': async (id, fn, serverless, cache, lookups) => {
+    let functionName = await resolveRef(id, serverless, cache, lookups)
+    return {
+      [id]: functionName,
+      [id + '.Arn']: `arn:aws:lambda:${lookups['AWS::Region']}:${lookups['AWS::AccountId']}:function:${functionName}`
+    }
+  },
+  'AWS::S3::Bucket': async (id, bucket, serverless, cache, lookups) => {
+    let bucketName = await resolveRef(id, serverless, cache, lookups)
+    return {
+      [id]: bucketName,
+      [id + '.Arn']: `arn:aws:s3:::${bucketName}`
+    }
+  }
+}
 module.exports = {
   generateConfig,
   getConfigFullPath,
   getConfigEnv,
   populateEnvFromConfig,
-  resolveConfigForLocal
+  resolveConfigForLocal,
+  resolveFnSub,
+  resolveTemplate,
+  typeExpander
 }
