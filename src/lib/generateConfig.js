@@ -50,8 +50,8 @@ const isTS = ts != null
 
 function generateConfig(filePath) {
   let ext = isTS ? '.ts' : '.js'
-  let dTSFilePath = filePath.replace(/\..*\.json$/, '.d.ts')
-  let configOutputPath = filePath.replace(/\..*\.json$/, ext)
+  let dTSFilePath = filePath.replace(/\.[^\/]*\.json$/, '.d.ts')
+  let configOutputPath = filePath.replace(/\.[^\/]*\.json$/, ext)
   let projectConfigTxt = fs.existsSync(filePath) && fs.readFileSync(filePath).toString()
   if (!projectConfigTxt) {
     return
