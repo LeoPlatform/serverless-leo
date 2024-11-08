@@ -50,8 +50,8 @@ const isTS = ts != null
 
 function generateConfig(filePath) {
   let ext = isTS ? '.ts' : '.js'
-  let dTSFilePath = filePath.replace(/\..*\.json$/, '.d.ts')
-  let configOutputPath = filePath.replace(/\..*\.json$/, ext)
+  let dTSFilePath = filePath.replace(/\.[^\/]*\.json$/, '.d.ts')
+  let configOutputPath = filePath.replace(/\.[^\/]*\.json$/, ext)
   let projectConfigTxt = fs.existsSync(filePath) && fs.readFileSync(filePath).toString()
   if (!projectConfigTxt) {
     return
@@ -360,7 +360,7 @@ function inferTypes(node) {
 function getConfigFullPath(serverless, file) {
   if (file) {
     file = path.resolve(process.cwd(), file)
-  } else if (serverless.service.custom.leo && serverless.service.custom.leo.configurationPath) {
+  } else if (serverless.service.custom && serverless.service.custom.leo && serverless.service.custom.leo.configurationPath) {
     file = path.resolve(serverless.serviceDir || serverless.servicePath, serverless.service.custom.leo.configurationPath)
   } else {
     file = path.resolve(process.cwd(), './project-config.def.json')
@@ -519,6 +519,12 @@ async function resolveConfigForLocal(serverless, cache = {}) {
     let v = { value: rstreamsConfigEnvSecretTemplate }
     await resolveTemplate(v, serverless, cache)
     serverless.service.provider.environment.RSTREAMS_CONFIG_SECRET = v.value
+  }
+  let env = serverless.service.provider.environment
+  if (env) {
+    let v = { value: env }
+    await resolveTemplate(v, serverless, cache)
+    serverless.service.provider.environment = v.value
   }
 }
 
@@ -842,7 +848,7 @@ function getConfigEnv(serverless, file, config) {
         'me-south-1': ['us-east-1'],
         'sa-east-1': ['us-east-1']
       }).reduce((a, [key, values]) => {
-        if (serverless.service.custom.leo.rsfConfigReplicationRegions &&
+        if (serverless.service.custom && serverless.service.custom.leo && serverless.service.custom.leo.rsfConfigReplicationRegions &&
           serverless.service.custom.leo.rsfConfigReplicationRegions[key]) {
           values = serverless.service.custom.leo.rsfConfigReplicationRegions[key]
           if (!Array.isArray(values)) {

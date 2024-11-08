@@ -17,7 +17,8 @@ const reservedFields = {
 }
 const reservedBotFields = {
   tags: true,
-  repoUrl: true
+  repoUrl: true,
+  invocation: true
 }
 
 const replaceTextPairsInFile = (filePath, replacementPairs) => {

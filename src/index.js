@@ -201,7 +201,7 @@ class ServerlessLeo {
         opts['project-name'] = path.basename(dir)
         let prompt = require('prompt-sync')({ sigint: true })
         let slsConfig = this.serverless.service
-        let tokens = slsConfig.custom.leo.rsfTemplateTokens || {}
+        let tokens = (slsConfig.custom && slsConfig.custom.leo && slsConfig.custom.leo.rsfTemplateTokens) || {}
 
         const replacements = []
         Object.entries(tokens).map(([key, token]) => {
@@ -292,7 +292,7 @@ class ServerlessLeo {
         await this.hooks['before:package:createDeploymentArtifacts']()
         let webpackPlugin = this.serverless.pluginManager.plugins.find(s => s.constructor.name === 'ServerlessWebpack')
 
-        let skipWebpack = (this.serverless.service.custom.leo || {}).skipWebpack !== false
+        let skipWebpack = ((this.serverless.service.custom && this.serverless.service.custom.leo) || {}).skipWebpack !== false
         // Setup the node runner
         if (skipWebpack && opts.runner === 'node' && (this.serverless.service.provider.runtime || '').match(/^nodejs/)) {
           // Try and find the tsconfig build directory
