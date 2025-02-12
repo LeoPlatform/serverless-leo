@@ -299,7 +299,7 @@ function flattenVariables(obj, out, separator, prefix) {
 }
 
 function toProperCase(text) {
-  return text.replace(/[^a-zA-Z0-9]+/g, '_').replace(/(^\w|_\w)/g, function (txt) {
+  return text.replace(/[^a-zA-Z0-9]+/g, '_').replace(/(^\w|_\w)/g, function(txt) {
     return txt.charAt(txt.length === 1 ? 0 : 1).toUpperCase()
   })
 }
@@ -314,7 +314,7 @@ function getDataSafe(data = {}, path = '') {
 }
 
 function resolveKeywords(template, data, opts) {
-  const name = template.replace(/\${(.*?)}/g, function (match, field) {
+  const name = template.replace(/\${(.*?)}/g, function(match, field) {
     let value = getDataSafe(data, field.trim())
     if (value != null && typeof value === 'object') {
       value = JSON.stringify(value, null, opts.spaces || 2)
@@ -395,6 +395,9 @@ function getConfigReferences(config, useSecretsManager, lookups = [], permission
           } else {
             let parts = value.key.split('.')
             parts = [parts[0], 'SecretString'].concat(parts.splice(1).join('.'))
+            if (parts[parts.length - 1] === '') {
+              parts.pop()
+            }
             v = { 'Fn::Sub': `{{resolve:secretsmanager:${parts.join(':')}}}` }
           }
           break
