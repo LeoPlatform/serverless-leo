@@ -195,7 +195,7 @@ async function editConfig(serverless, configPath, region) {
       ...rsfGlobalConfig
     }
 
-    let rsfStages = Array.from(new Set([].concat(rsfGlobalConfig.stages || []).concat(serverless.service.custom.leo.rsfConfigStages || [])))
+    let rsfStages = Array.from(new Set([].concat(rsfGlobalConfig.stages || []).concat((serverless.service.custom && serverless.service.custom.leo && serverless.service.custom.leo.rsfConfigStages) || [])))
 
     const stageRegex = new RegExp(`(${rsfStages.join('|')})`, 'ig')
 

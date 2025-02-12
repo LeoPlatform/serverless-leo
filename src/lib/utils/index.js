@@ -17,7 +17,8 @@ const reservedFields = {
 }
 const reservedBotFields = {
   tags: true,
-  repoUrl: true
+  repoUrl: true,
+  invocation: true
 }
 
 const replaceTextPairsInFile = (filePath, replacementPairs) => {
@@ -258,7 +259,7 @@ const removeExternallyProvidedServerlessEnvironmentVariables = (serverless, func
   // Override any function level environment variables that already exists in process.env
   Object.entries(func.environment || {}).forEach(([key, value]) => {
     if (env[key] != null) {
-      func.environment[key] = value
+      func.environment[key] = env[key]
     }
   })
 }

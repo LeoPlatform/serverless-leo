@@ -9,7 +9,7 @@ const fs = require('fs')
 const validate = require('./lib/validate')
 const compileLeo = require('./lib/leo')
 const utils = require('./lib/utils')
-const { generateConfig, getConfigFullPath, populateEnvFromConfig, resolveConfigForLocal } = require('./lib/generateConfig')
+const { generateConfig, getConfigFullPath, populateEnvFromConfig, resolveConfigForLocal, resolveTemplate } = require('./lib/generateConfig')
 const { editConfig } = require('./lib/config-parameters')
 
 // TODO: sls create - Place tempates in memorable cdn location like https://dsco.io/aws-nodejs-leo-microservice
@@ -20,6 +20,7 @@ const { editConfig } = require('./lib/config-parameters')
 // TODO: test validation phase - that it complains there are no valid sections
 
 class ServerlessLeo {
+  // eslint-disable-next-line space-before-function-paren
   constructor(serverless, options) {
     this.serverless = serverless
     this.options = options
@@ -200,7 +201,7 @@ class ServerlessLeo {
         opts['project-name'] = path.basename(dir)
         let prompt = require('prompt-sync')({ sigint: true })
         let slsConfig = this.serverless.service
-        let tokens = slsConfig.custom.leo.rsfTemplateTokens || {}
+        let tokens = (slsConfig.custom && slsConfig.custom.leo && slsConfig.custom.leo.rsfTemplateTokens) || {}
 
         const replacements = []
         Object.entries(tokens).map(([key, token]) => {
@@ -291,7 +292,7 @@ class ServerlessLeo {
         await this.hooks['before:package:createDeploymentArtifacts']()
         let webpackPlugin = this.serverless.pluginManager.plugins.find(s => s.constructor.name === 'ServerlessWebpack')
 
-        let skipWebpack = (this.serverless.service.custom.leo || {}).skipWebpack !== false
+        let skipWebpack = ((this.serverless.service.custom && this.serverless.service.custom.leo) || {}).skipWebpack !== false
         // Setup the node runner
         if (skipWebpack && opts.runner === 'node' && (this.serverless.service.provider.runtime || '').match(/^nodejs/)) {
           // Try and find the tsconfig build directory
@@ -354,14 +355,19 @@ class ServerlessLeo {
 
         serverless.service.provider.environment = serverless.service.provider.environment || {}
         serverless.service.provider.environment.RSF_INVOKE_STAGE = serverless.service.provider.stage
-        await resolveConfigForLocal(this.serverless, {
+        let cache = {
           stack: (serverless.service.provider.stackParameters || []).reduce((all, one) => {
             if (one != null) {
               all[one.ParameterKey] = one.ParameterValue
             }
             return all
-          }, {})
-        })
+          }, {}),
+          cf: {},
+          sm: {},
+          ssm: {},
+          cfr: {}
+        }
+        await resolveConfigForLocal(this.serverless, cache)
 
         for (let functionData of botsToInvoke) {
           // Service directory may have been changed from a previous bot invoke, just reset it back
@@ -394,6 +400,7 @@ class ServerlessLeo {
 
           // Clean Env Vars
           let func = this.serverless.service.getFunction(functionKey)
+          await resolveTemplate(func.environment || {}, this.serverless, cache)
           utils.removeExternallyProvidedServerlessEnvironmentVariables(this.serverless, func)
 
           // Invoke the function
