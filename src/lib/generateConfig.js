@@ -40,15 +40,19 @@ async function resolveCfRefValue(provider, resourceLogicalId, sdkParams = {}) {
 }
 
 let ts
+let paths = module.paths
 try {
+  module.paths = require('module')._nodeModulePaths(process.cwd())
   ts = require('typescript')
 } catch (e) {
   // No Typescript
+} finally {
+  module.paths = paths
 }
 
 const isTS = ts != null
 
-function generateConfig(filePath) {
+function generateConfig(filePath, serverless) {
   let ext = isTS ? '.ts' : '.js'
   let dTSFilePath = filePath.replace(/\.[^\/]*\.json$/, '.d.ts')
   let configOutputPath = filePath.replace(/\.[^\/]*\.json$/, ext)
@@ -224,7 +228,7 @@ function generateConfig(filePath) {
     {
       interfaceName: interfaceName,
       value: getType(eConfig),
-      imports: imports.size ? `import { ${Array.from(imports).join(', ')} } from "types";\n\n` : ''
+      imports: imports.size ? `import { ${Array.from(imports).join(', ')} } from "${((serverless.service.custom || {}).leo || {}).rsfTypesModule || 'types'}";\n\n` : ''
     }, { spaces: spaces })
 
   let template = [
