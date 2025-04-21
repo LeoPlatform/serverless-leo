@@ -28,7 +28,7 @@
   },
   "homepage": "https://github.com/LeoPlatform/serverless-leo#readme",
   "dependencies": {
-    "bluebird": "^3.5.4",
+    "bluebird": "^3.7.2",
     "find-up": "^3.0.0",
     "ignore": "^5.1.1",
     "leo-config": "^1.1.0",
