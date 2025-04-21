@@ -508,9 +508,9 @@ async function resolveConfigForLocal(serverless, cache = {}) {
   if (!configFromCache && rsfConfigEnvTemplate) {
     let v = { value: rsfConfigEnvTemplate }
     await resolveTemplate(v, serverless, cache)
-    serverless.service.provider.environment.RSF_CONFIG = v.value
+    serverless.service.provider.environment.RSF_CONFIG = v.value.replace(/"{/g, '{').replace(/}"/g, "}")
     fs.mkdirSync(path.dirname(configFileCache), { recursive: true })
-    fs.writeFileSync(configFileCache, v.value)
+    fs.writeFileSync(configFileCache, v.value.replace(/"{/g, '{').replace(/}"/g, "}"))
   }
 
   let busConfigFromCache = false
