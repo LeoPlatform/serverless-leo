@@ -52,7 +52,7 @@ try {
 
 const isTS = ts != null
 
-function generateConfig(filePath) {
+function generateConfig(filePath, serverless) {
   let ext = isTS ? '.ts' : '.js'
   let dTSFilePath = filePath.replace(/\.[^\/]*\.json$/, '.d.ts')
   let configOutputPath = filePath.replace(/\.[^\/]*\.json$/, ext)
@@ -294,7 +294,7 @@ function generateConfig(filePath) {
       interfaceName: interfaceName,
       value: getType(eConfig),
       types: Object.keys(types).length ? Array.from(Object.entries(types).map(([type, name]) => `export interface ${name} ${type}`)).join('\n\n') + '\n\n' : '',
-      imports: imports.size ? `import { ${Array.from(imports).join(', ')} } from "types";\n\n` : ''
+      imports: imports.size ? `import { ${Array.from(imports).join(', ')} } from "${((serverless.service.custom || {}).leo || {}).rsfTypesModule || 'types'}";\n\n` : ''
     }, { spaces: spaces })
 
   let template = [
@@ -802,13 +802,14 @@ function getConfigEnv(serverless, file, config) {
   const stage = serverless.service.provider.stage
   const custom = serverless.service.custom[stage] ? serverless.service.custom[stage] : serverless.service.custom
   const leoStack = custom.leoStack || serverless.service.custom.leoStack
+  const leoAuth = custom.leoAuth || serverless.service.custom.leoAuth
   const useSecretsManager = ((serverless.service.custom || {}).leo || {}).rsfConfigType === 'secretsmanager'
 
   let { output, lookups, permissions } = getConfigReferences(config, useSecretsManager)
   let hasConfig = Object.keys(output || {}).length > 0
   let params = {};
   // Find Stack Parameters
-  (JSON.stringify({ leoStack: leoStack, ...lookups }).match(/\$\{(.*?)\}/g) || []).forEach((a) => {
+  (JSON.stringify({ leoStack: leoStack, leoAuth: leoAuth, ...lookups }).match(/\$\{(.*?)\}/g) || []).forEach((a) => {
     let key = a.replace(/^\$\{(.*)\}$/, '$1').split('.')[0]
     if (!(key in params)) {
       let value = serverless.pluginManager.cliOptions[key]
@@ -852,6 +853,8 @@ function getConfigEnv(serverless, file, config) {
       'Fn::Sub': 'arn:aws:secretsmanager:*:${AWS::AccountId}:secret:rsf-config-${AWS::StackName}-${AWS::Region}-*'
     }, leoStack ? {
       'Fn::Sub': `arn:aws:secretsmanager:\${AWS::Region}:\${AWS::AccountId}:secret:rstreams-${leoStack}-*`
+    } : undefined, leoAuth ? {
+      'Fn::Sub': `arn:aws:secretsmanager:\${AWS::Region}:\${AWS::AccountId}:secret:leoauth-${leoAuth}-*`
     } : undefined).filter(a => a != null)
   }
 
@@ -878,6 +881,27 @@ function getConfigEnv(serverless, file, config) {
           })
         }
       }
+
+      if (leoAuth) {
+        let alreadyHasLeoPolicy = (role.Properties.ManagedPolicyArns || []).some(p => {
+          let policyImport = p['Fn::ImportValue']
+
+          if (policyImport && typeof policyImport === 'string' && policyImport === `${leoAuth}-Policy`) {
+            return true
+          } else if (policyImport && typeof policyImport['Fn::Sub'] === 'string' && policyImport['Fn::Sub'] === `${leoAuth}-Policy`) {
+            return true
+          }
+          return false
+        })
+        if (!alreadyHasLeoPolicy) {
+          role.Properties.ManagedPolicyArns = (role.Properties.ManagedPolicyArns || []).concat({
+            'Fn::ImportValue': {
+              'Fn::Sub': `${leoAuth}-Policy`
+            }
+          })
+        }
+      }
+
       if (secretsPermissions.length > 0) {
         role.Properties.Policies = (role.Properties.Policies || []).concat({
           PolicyName: 'RSFSecretAccess',
@@ -1018,6 +1042,28 @@ function getConfigEnv(serverless, file, config) {
           'Region': {
             'Fn::ImportValue': {
               'Fn::Sub': `${leoStack}-Region`
+            }
+          }
+        }]
+      }
+    }) : {}, leoAuth ? (useSecretsManager ? {
+      LEOAUTH_CONFIG_SECRET: {
+        'Fn::Sub': `leoauth-${leoAuth}`
+      }
+    } : {
+      LEOAUTH: {
+        'Fn::Sub': [JSON.stringify({
+          'LeoAuth': '${LeoAuth}',
+          'LeoAuthUser': '${LeoAuthUser}'
+        }), {
+          'LeoAuth': {
+            'Fn::ImportValue': {
+              'Fn::Sub': `${leoAuth}-LeoAuth`
+            }
+          },
+          'LeoAuthUser': {
+            'Fn::ImportValue': {
+              'Fn::Sub': `${leoAuth}-LeoAuthUser`
             }
           }
         }]

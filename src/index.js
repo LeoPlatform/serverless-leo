@@ -266,7 +266,7 @@ class ServerlessLeo {
         state.generatedConfig = true
 
         return BbPromise.bind(this)
-          .then(() => generateConfig(file))
+          .then(() => generateConfig(file, this.serverless))
           .then((d) => populateEnvFromConfig(this.serverless, file, d))
       },
       'after:package:compileFunctions': () => {
@@ -443,7 +443,7 @@ class ServerlessLeo {
         fs.watch(file, {
         }, (eventType, filename) => {
           try {
-            generateConfig(file)
+            generateConfig(file, this.serverless)
           } catch (err) {
             this.serverless.cli.error(err)
           }
@@ -452,7 +452,7 @@ class ServerlessLeo {
       'generate-config:run': () => {
         let opts = { ...this.serverless.pluginManager.cliOptions }
         let file = getConfigFullPath(this.serverless, opts.file)
-        generateConfig(file)
+        generateConfig(file, this.serverless)
       },
       'before:aws:deploy:deploy:createStack': async () => {
         // Create doesn't use stack parameters so we need to remove them
@@ -474,7 +474,7 @@ class ServerlessLeo {
         let opts = { ...this.serverless.pluginManager.cliOptions }
         let file = getConfigFullPath(this.serverless, opts.file)
         await editConfig(this.serverless, file, opts.region)
-        generateConfig(file)
+        generateConfig(file, this.serverless)
       }
     }
   }
