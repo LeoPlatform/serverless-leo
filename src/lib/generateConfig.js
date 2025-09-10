@@ -11,32 +11,51 @@ const { fetchAll } = require('./utils')
 // } catch (err) {
 //   resolveCfRefValue = require('serverless/lib/plugins/aws/utils/resolveCfRefValue');
 // }
-async function resolveCfRefValue(provider, resourceLogicalId, sdkParams = {}) {
+async function resolveCfRefValue(provider, resourceLogicalId, sdkParams = {}, cache = {}) {
   let params = (provider.serverless.service.resources.Parameters || {})
   if (resourceLogicalId in params) {
-    return (provider.serverless.service.provider.stackParameters || {})[resourceLogicalId]
+
+    return (provider.serverless.service.provider.stackParameters || []).find(pm => pm.ParameterKey == resourceLogicalId)?.ParameterValue
+    //return (provider.serverless.service.provider.stackParameters || {})[resourceLogicalId]
+  } else if (resourceLogicalId in cache) {
+    return cache[resourceLogicalId]
   }
 
-  return provider
-    .request(
-      'CloudFormation',
-      'listStackResources',
-      Object.assign({ StackName: provider.naming.getStackName() }, sdkParams)
-    )
-    .then((result) => {
-      const targetStackResource = result.StackResourceSummaries.find(
-        (stackResource) => stackResource.LogicalResourceId === resourceLogicalId
+  let nextToken = null
+  do {
+    let result = await provider
+      .request(
+        'CloudFormation',
+        'listStackResources',
+        Object.assign({ StackName: provider.naming.getStackName() }, { ...sdkParams, NextToken: nextToken })
       )
-      if (targetStackResource) return targetStackResource.PhysicalResourceId
-      if (result.NextToken) {
-        return resolveCfRefValue(provider, resourceLogicalId, { NextToken: result.NextToken })
-      }
 
-      throw new Error(
-        `Could not resolve Ref with name ${resourceLogicalId}. Are you sure this value matches one resource logical ID ?`,
-        'CF_REF_RESOLUTION'
-      )
+    result.StackResourceSummaries.forEach(r => {
+      cache[r.LogicalResourceId] = r.PhysicalResourceId
     })
+    nextToken = result.NextToken
+  } while (nextToken != null)
+  return cache[resourceLogicalId]
+  // return provider
+  //   .request(
+  //     'CloudFormation',
+  //     'listStackResources',
+  //     Object.assign({ StackName: provider.naming.getStackName() }, sdkParams)
+  //   )
+  //   .then((result) => {
+  //     const targetStackResource = result.StackResourceSummaries.find(
+  //       (stackResource) => stackResource.LogicalResourceId === resourceLogicalId
+  //     )
+  //     if (targetStackResource) return targetStackResource.PhysicalResourceId
+  //     if (result.NextToken) {
+  //       return resolveCfRefValue(provider, resourceLogicalId, { NextToken: result.NextToken })
+  //     }
+  //     return undefined
+  //     throw new Error(
+  //       `Could not resolve Ref with name ${resourceLogicalId}. Are you sure this value matches one resource logical ID ?`,
+  //       'CF_REF_RESOLUTION'
+  //     )
+  //   })
 }
 
 let ts
@@ -489,7 +508,9 @@ async function resolveConfigForLocal(serverless, cache = {}) {
   if (!configFromCache && rsfConfigEnvTemplate) {
     let v = { value: rsfConfigEnvTemplate }
     await resolveTemplate(v, serverless, cache)
-    serverless.service.provider.environment.RSF_CONFIG = v.value
+    serverless.service.provider.environment.RSF_CONFIG = v.value.replace(/"{/g, '{').replace(/}"/g, "}")
+    fs.mkdirSync(path.dirname(configFileCache), { recursive: true })
+    fs.writeFileSync(configFileCache, v.value.replace(/"{/g, '{').replace(/}"/g, "}"))
   }
 
   let busConfigFromCache = false
@@ -583,6 +604,7 @@ const resolveServices = {
       }
       if (allCfExports == null) {
         allCfExports = await fetchAll(t => provider.request('CloudFormation', 'listExports', { NextToken: t }))
+        fs.mkdirSync(path.dirname(file), { recursive: true })
         fs.writeFileSync(file, JSON.stringify(allCfExports))
       }
       allCfExports.Exports.forEach(v => {
@@ -594,13 +616,13 @@ const resolveServices = {
   cfr: async (provider, key, cache) => {
     if (!(key in cache.cfr)) {
       let [stack, resource] = key.split('.')
-      cache.cfr[key] = await resolveCfRefValue(provider, resource, { StackName: stack })
+      cache.cfr[key] = await resolveCfRefValue(provider, resource, { StackName: stack }, cache.cfr)
     }
     return cache.cfr[key]
   },
   stack: async (provider, key, cache) => {
     if (!(key in cache.stack)) {
-      cache.stack[key] = await resolveCfRefValue(provider, key)
+      cache.stack[key] = await resolveCfRefValue(provider, key, {}, cache.stack)
     }
     return cache.stack[key]
   }
@@ -646,7 +668,7 @@ async function resolveTemplate(template, serverless, cache, lookups) {
 async function resolveRef(preValue, serverless, cache, lookups) {
   if (serverless.service.resources.Parameters[preValue]) {
     return lookups[preValue]
-  } else if (serverless.service.resources.Conditions[preValue]) {
+  } else if (serverless.service.resources.Conditions && serverless.service.resources.Conditions[preValue]) {
     // ???
     return preValue
   } else {
@@ -664,9 +686,10 @@ async function getLookups(serverless, cache) {
     }, {})),
     'AWS::AccountId': await serverless.providers.aws.getAccountId(),
     'AWS::Region': serverless.providers.aws.getRegion(),
-    'AWS::StackName': serverless.providers.aws.naming.getStackName()
-    // 'Stage': serverless.service.provider.stage,
-    // 'StageTitleCase': serverless.service.provider.stage[0].toUpperCase() + serverless.service.provider.stage.substring(1)
+    'AWS::StackName': serverless.providers.aws.naming.getStackName(),
+    'stage': serverless.service.provider.stage,
+    'Stage': serverless.service.provider.stage[0].toUpperCase() + serverless.service.provider.stage.substring(1),
+    'StageTitleCase': serverless.service.provider.stage[0].toUpperCase() + serverless.service.provider.stage.substring(1)
   }
 
   // Add all resources to the lookups
@@ -690,7 +713,38 @@ async function getLookups(serverless, cache) {
     }
   }
 
+  const stackParams = getStackParamFileFromServerlessFusionConfig(serverless.config.serviceDir, serverless.service.provider.stage, serverless.service.custom.serverlessFusion)
+  if (stackParams) {
+    for (let entry of Object.entries(stackParams.Parameters)) {
+      let [key, value] = entry
+      let paramDef = (serverless.service.resources.Parameters || {})[key]
+      if (paramDef && paramDef.Type.match(/AWS::SSM::Parameter/)) {
+        let t = { value: `{{resolve:ssm:${value}}}` }
+        await resolveTemplate(t, serverless, cache, lookups)
+        lookups[key] = t.value
+      } else {
+        lookups[key] = value
+      }
+    }
+  }
+
   return lookups
+}
+
+function getStackParamFileFromServerlessFusionConfig(serverlessConfigDir, stage, serverlessFusionConfig) {
+  let result
+  if (serverlessFusionConfig && typeof serverlessFusionConfig === 'object' && 'includeStackParamsFiles' in serverlessFusionConfig && typeof serverlessFusionConfig.includeStackParamsFiles === 'string') {
+    const fileName = path.join(serverlessConfigDir, serverlessFusionConfig.includeStackParamsFiles, `${stage}.json`)
+    if ((0, fs.existsSync)(fileName)) {
+      const str = (0, fs.readFileSync)(fileName, 'utf8')
+      try {
+        result = JSON.parse(str)
+      } catch (ex) {
+        throw new Error(`Failed to parse stack params file defined in serverless fusion config at ${fileName}.  Error: ${ex instanceof Error ? ex.message : ex}. File content: ${str}`)
+      }
+    }
+  }
+  return result
 }
 
 async function resolveFnSub(fnSub, serverless, cache, lookups) {
@@ -1059,7 +1113,16 @@ function populateEnvFromConfig(serverless, file, config) {
  * Expand Resource Types to the needed properties for Fn::Sub
  */
 const typeExpander = {
-  default: () => ({}),
+  default: async (id, resource, serverless, cache, lookups) => ({
+    [id]: await resolveRef(id, serverless, cache, lookups)
+  }),
+  'AWS::IAM::Role': async (id, role, p, cache, lookups) => {
+    let roleName = await resolveRef(id, p, cache, lookups)
+    return {
+      [id]: roleName,
+      [id + '.Arn']: `arn:aws:iam::${lookups['AWS::AccountId']}:role/${roleName}`
+    }
+  },
   'AWS::Lambda::Function': async (id, fn, serverless, cache, lookups) => {
     let functionName = await resolveRef(id, serverless, cache, lookups)
     return {
