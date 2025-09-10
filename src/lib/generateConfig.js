@@ -99,6 +99,34 @@ function generateConfig(filePath, serverless) {
     })
   }
 
+  // Find the types.d.ts file
+  let dTSTypeFilePath
+  for (let i = 0; i < 10; i++) {
+    let dir = path.dirname(dTSFilePath)
+
+    if (fs.existsSync(path.resolve(dir, 'types.d.ts'))) {
+      dTSTypeFilePath = path.resolve(dir, 'types.d.ts')
+      break
+    } else {
+      dir = path.dirname(dir)
+    }
+  }
+
+  let definedInterfaces = {}
+  if (fs.existsSync(dTSTypeFilePath)) {
+    let src = ts.createSourceFile('blah.ts', fs.readFileSync(dTSTypeFilePath).toString(), ts.ScriptTarget.ES2022)
+    src.forEachChild(child => {
+      if (child.kind === ts.SyntaxKind.InterfaceDeclaration) {
+        let o = build(child, {}, [])
+
+        let intf = child
+        let flat = {}
+        flattenVariables(o, flat, '.', '')
+        definedInterfaces[intf.name.escapedText] = flat
+      }
+    })
+  }
+
   let interfaceName = Object.keys(interfaces)[0]
   let configInterface = interfaces[interfaceName] || {}
   function expandConfig(projectConfig, path) {
@@ -167,6 +195,7 @@ function generateConfig(filePath, serverless) {
   let spacesLength = spaces.length
 
   let imports = new Set()
+  let types = {}
   let knownTypes = {
     'string': 'string',
     'number': 'number',
@@ -179,6 +208,10 @@ function generateConfig(filePath, serverless) {
   }
   function getType(field, depth = '') {
     if (field != null && typeof field === 'object') {
+      if (field.__type != null && definedInterfaces[field.__type] != null) {
+        imports.add(field.__type)
+        return field.__type
+      }
       if (field.service != null && field.key != null && field.type != null) {
         let t = field.type === 'dynamic' ? 'unknown' : field.type
 
@@ -229,11 +262,43 @@ function generateConfig(filePath, serverless) {
           return `${r}[]`
         } else {
           let r = Object.entries(field).map(([key, value]) => {
+            if (key === '__type') {
+              return
+            }
             // console.log(value)
             // eslint-disable-next-line eqeqeq
             const question = value.options && value.options.optional == true ? '?' : ''
-            return `${nextDepth}${key}${question}: ${getType(value, nextDepth)};`
-          }).join('\n')
+            let type = getType(value, nextDepth)
+            if (type.includes('{')) {
+              // let typeDef = `export interface ${typeInterface} ${type}`
+              type = type.replace(new RegExp(`^${nextDepth}`, 'gm'), '')
+              // The definition doesn't exist so lets add it
+              if (types[type] == null) {
+                // Get all existing names so we don't collide with them
+                let typeNames = new Set(Object.values(types))
+
+                // Base name
+                let typeInterface = value.__type || (toProperCase(key) + 'Data')
+                let typeInterfaceTmp = typeInterface
+
+                // Try 10 times to find a unique name
+                for (let i = 0; i < 10; i++) {
+                  if (!typeNames.has(typeInterfaceTmp)) {
+                    typeInterface = typeInterfaceTmp
+                    break
+                  } else {
+                    typeInterfaceTmp = typeInterface + (i + 1)
+                  }
+                }
+
+                // Add the name to the type
+                types[type] = typeInterface
+              }
+              // Set the type to the interface name
+              type = types[type]
+            }
+            return `${nextDepth}${key}${question}: ${type};`
+          }).filter(l => l != null).join('\n')
           return `{\n${r}\n${depth.substring(0, depth.length - spacesLength)}}`
         }
       }
@@ -243,10 +308,11 @@ function generateConfig(filePath, serverless) {
   }
 
   interfaceDef = resolveKeywords(
-    '${imports}export interface ${interfaceName} ${value}\n',
+    '${imports}${types}export interface ${interfaceName} ${value}\n',
     {
       interfaceName: interfaceName,
       value: getType(eConfig),
+      types: Object.keys(types).length ? Array.from(Object.entries(types).map(([type, name]) => `export interface ${name} ${type}`)).join('\n\n') + '\n\n' : '',
       imports: imports.size ? `import { ${Array.from(imports).join(', ')} } from "${((serverless.service.custom || {}).leo || {}).rsfTypesModule || 'types'}";\n\n` : ''
     }, { spaces: spaces })
 
@@ -446,6 +512,10 @@ function getConfigReferences(config, useSecretsManager, lookups = [], permission
       let r = getConfigReferences(value, useSecretsManager, lookups, permissions)
       output[key] = r.output
     } else {
+      if (key === '__type') {
+        // ignore typescript type
+        return
+      }
       output[key] = value
     }
   })
@@ -466,6 +536,7 @@ async function resolveConfigForLocal(serverless, cache = {}) {
   let configFromCache = false
   let serviceDir = serverless.config.serviceDir || serverless.config.servicePath
   let configFileCache = path.resolve(serviceDir, `.rsf/config-${fullStage}.json`)
+  fs.mkdirSync(path.dirname(configFileCache), { recursive: true })
   if (fs.existsSync(configFileCache)) {
     let stat = fs.statSync(configFileCache)
     let duration = Math.floor((Date.now() - stat.mtimeMs) / 1000)
