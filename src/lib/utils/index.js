@@ -272,7 +272,7 @@ const removeExternallyProvidedServerlessEnvironmentVariables = (serverless, func
  * @returns BotInvocationEvent
  */
 const buildBotInvocationEvent = (serverless, options) => {
-  if (serverless.pluginManager.cliOptions.data) {
+  if (serverless.pluginManager.cliOptions.data && typeof serverless.pluginManager.cliOptions.data === 'string') {
     return JSON.parse(serverless.pluginManager.cliOptions.data)
   }
 

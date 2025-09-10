@@ -475,6 +475,25 @@ class ServerlessLeo {
         let file = getConfigFullPath(this.serverless, opts.file)
         await editConfig(this.serverless, file, opts.region)
         generateConfig(file, this.serverless)
+      },
+      'offline:start:init': async () => {
+        await this.hooks['before:package:createDeploymentArtifacts']()
+
+        serverless.service.provider.environment = serverless.service.provider.environment || {}
+        serverless.service.provider.environment.RSF_INVOKE_STAGE = serverless.service.provider.stage
+        let cache = {
+          stack: (serverless.service.provider.stackParameters || []).reduce((all, one) => {
+            if (one != null) {
+              all[one.ParameterKey] = one.ParameterValue
+            }
+            return all
+          }, {}),
+          cf: {},
+          sm: {},
+          ssm: {},
+          cfr: {}
+        }
+        await resolveConfigForLocal(this.serverless, cache)
       }
     }
   }
