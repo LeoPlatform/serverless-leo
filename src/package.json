@@ -7,7 +7,9 @@
     "example": "examples"
   },
   "scripts": {
-    "test": "mocha 'test/**/*.test.js'"
+    "test": "mocha 'test/**/*.test.js'",
+    "lint": "eslint .",
+    "lint": "eslint ."
   },
   "repository": {
     "type": "git",
