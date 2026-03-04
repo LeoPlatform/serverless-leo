@@ -1,0 +1,17 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: "serverless-leo"
+  description: "Serverless Framework plugin for Leo/RStreams microservices"
+  annotations:
+    github.com/project-slug: LeoPlatform/serverless-leo
+    backstage.io/techdocs-ref: dir:.
+  tags:
+    - javascript
+    - serverless
+    - plugin
+    - leo
+spec:
+  type: library
+  lifecycle: production
+  owner: "cup-shared-services"
