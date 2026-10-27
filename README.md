@@ -29,8 +29,10 @@ At this point, you will have a new project with a `bots` directory including you
 2. Update the `leo_config.js` file to include the leo bus values your service will use
 
 ## Rust specific
-1. In order to register this lambda in your workspace, you need to add the relative path to the newly created folder in your root cargo.toml workspace members.
-2. Update the bus_config() of the main.rs in your newly created bot template to have the correct provider information.
+The Rust templates use [rstreams](https://github.com/Chub-Engineering/rstreams-rs) 3.x and `lambda_runtime` 1.x.
+1. Add the relative path of the new bot folder to the `members` of your root `Cargo.toml` workspace.
+2. rstreams is published to the private `dsco-cargo` Cargo registry. Add that registry to your `.cargo/config.toml` (ask the RStreams maintainers for the index URL) and build with `CARGO_NET_GIT_FETCH_WITH_CLI=true`.
+3. The bot reads its bus configuration from the `RSTREAMS_CONFIG` or `RSTREAMS_CONFIG_SECRET` environment variable that serverless-leo sets for the configured bus stack, the same way the Node SDK does, so no bus values go in `main.rs`.
 
 Once you've made these changes, you can run `serverless deploy` which will use your default AWS_PROFILE.
 

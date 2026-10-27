@@ -1,0 +1,10 @@
+[package]
+name = "NAME_TOKEN"
+version = "0.1.0"
+authors = ["NAME_HERE"]
+edition = "2021"
+
+[dependencies]
+lambda_runtime = "1"
+tokio = { version = "1", features = ["full"] }
+serde_json = "1"

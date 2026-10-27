@@ -1,25 +1,13 @@
+use lambda_runtime::Context;
+use rstreams::events::{Event, WriteEvent};
+use rstreams::{
+    BotInvocationEvent, Error, LeoReadOptions, LeoSdk, LeoWriteOptions, RefreshingProvider,
+};
 use serde::{Deserialize, Serialize};
-use rstreams::{events::Event, BotInvocationEvent, LeoReadOptions, LeoSdk, AllProviders, LeoWriteOptions, Error};
-use rstreams::aws::AWSProvider;
-use rusoto_signature::Region;
-use lambda::{run, handler_fn};
-use rstreams::events::WriteEvent;
+use tokio::sync::OnceCell;
 
-pub struct ExampleSdkConfig;
-
-impl ExampleSdkConfig {
-    pub fn bus_config() -> AllProviders {
-        AllProviders::AWS(AWSProvider::new(
-            Region::UsEast1,
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-        ))
-    }
-}
+// Built once per Lambda execution environment so warm invocations reuse its clients.
+static PROVIDER: OnceCell<RefreshingProvider> = OnceCell::const_new();
 
 #[derive(Deserialize, Serialize, Debug)]
 struct MyReadEvent {
@@ -30,7 +18,6 @@ struct MyReadEvent {
     order_status: String,
 }
 
-
 #[derive(Deserialize, Serialize, Debug)]
 struct EnrichedWriteEvent {
     suborder_id: usize,
@@ -40,14 +27,14 @@ struct EnrichedWriteEvent {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    run(handler_fn(enrich)).await?;
-    Ok(())
+    rstreams::run(enrich).await
 }
 
-
-async fn enrich(event: BotInvocationEvent<()>, context: lambda::Context) -> Result<(), Error> {
-
-    let sdk = LeoSdk::new(ExampleSdkConfig::bus_config());
+async fn enrich(event: BotInvocationEvent<()>, context: Context) -> Result<(), Error> {
+    let provider = PROVIDER
+        .get_or_try_init(|| async { RefreshingProvider::from_environment().await })
+        .await?;
+    let sdk = LeoSdk::new((*provider.refreshed().await).clone());
     let bot_id = &event.bot_id;
     let source_queue = "SOURCE_TOKEN";
     let dest_queue = "DESTINATION_TOKEN";
@@ -59,28 +46,24 @@ async fn enrich(event: BotInvocationEvent<()>, context: lambda::Context) -> Resu
             LeoReadOptions::default(),
             LeoWriteOptions::default().with_initial_values(&event),
             |event: Event<MyReadEvent>| {
-
                 //enrichment process here
-                futures::future::ready(match &event.payload {
-                    Some(data) => Some(Ok(WriteEvent::from_read_event(
+                futures::future::ready(event.payload.as_ref().map(|data| {
+                    Ok(WriteEvent::from_read_event(
                         bot_id,
                         dest_queue,
                         Some(EnrichedWriteEvent {
-                            suborder_id: data.suborder_id.clone(),
+                            suborder_id: data.suborder_id,
                             po_number: data.po_number.clone(),
                             order_status: "shipped".to_string(),
                         }),
                         &event,
                     )
-                    .into())),
-                    None => None,
-                })
+                    .into())
+                }))
             },
         )
         .await
         .map_err(|e| e.into())
     })
-    .await?;
-
-    Ok(())
+    .await
 }
