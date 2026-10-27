@@ -1,26 +1,15 @@
+use anyhow::anyhow;
+use lambda_runtime::Context;
+use rstreams::events::Event;
+use rstreams::{
+    BotInvocationEvent, Error, LeoCheckpointOptions, LeoReadOptions, LeoSdk, RefreshingProvider,
+};
 use serde::{Deserialize, Serialize};
-use futures::FutureExt;
-use rstreams::{events::Event, BotInvocationEvent, LeoCheckpointOptions, LeoReadOptions, LeoSdk, AllProviders, Error};
-use rstreams::aws::AWSProvider;
-use rusoto_signature::Region;
-use lambda::{run, handler_fn};
-use anyhow::{anyhow};
+use tokio::sync::OnceCell;
 
-pub struct ExampleSdkConfig;
+// Built once per Lambda execution environment so warm invocations reuse its clients.
+static PROVIDER: OnceCell<RefreshingProvider> = OnceCell::const_new();
 
-impl ExampleSdkConfig {
-    pub fn bus_config() -> AllProviders {
-        AllProviders::AWS(AWSProvider::new(
-            Region::UsEast1,
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-        ))
-    }
-}
 #[derive(Deserialize, Serialize, Debug)]
 struct MyReadEvent {
     suborder_id: usize,
@@ -32,15 +21,14 @@ struct MyReadEvent {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    run(handler_fn(offload)).await?;
-    Ok(())
+    rstreams::run(offload).await
 }
 
-
-async fn offload(event: BotInvocationEvent<()>, context: lambda::Context) -> Result<(), Error> {
-
-    let sdk = LeoSdk::new(ExampleSdkConfig::bus_config());
-
+async fn offload(event: BotInvocationEvent<()>, context: Context) -> Result<(), Error> {
+    let provider = PROVIDER
+        .get_or_try_init(|| async { RefreshingProvider::from_environment().await })
+        .await?;
+    let sdk = LeoSdk::new((*provider.refreshed().await).clone());
     let bot_id = &event.bot_id;
     let source_queue = "SOURCE_TOKEN";
 
@@ -51,32 +39,20 @@ async fn offload(event: BotInvocationEvent<()>, context: lambda::Context) -> Res
             LeoReadOptions::default(),
             LeoCheckpointOptions::Enabled.with_initial_values(&event),
             |event: Event<MyReadEvent>| async move {
-
                 //offload processing here
-
-                let results = processing_function(event.eid.clone()).await;
-
-                match results {
-                    Ok(..) => Some(Ok(())),
-                    Err(err) => {
-                        Some(Err(anyhow!(format!("Failed to process event {}", err))))
-                    }
+                match processing_function(&event.eid).await {
+                    Ok(()) => Some(Ok(())),
+                    Err(err) => Some(Err(anyhow!("Failed to process event {}", err))),
                 }
             },
         )
-            .await
-            .map_err(|e| e.into())
+        .await
+        .map_err(|e| e.into())
     })
-        .then(|r| async move {
-            println!("Handler done!");
-            r
-        })
-        .await?;
-
-    Ok(())
+    .await
 }
 
-async fn processing_function(eid: String) -> anyhow::Result<()> {
+async fn processing_function(eid: &str) -> anyhow::Result<()> {
     println!("Handling event eid: {}", eid);
     Ok(())
 }
